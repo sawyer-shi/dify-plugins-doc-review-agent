@@ -1,0 +1,73 @@
+identity:
+  author: "sawyer-shi"
+  name: doc_annotator
+  label:
+    en_US: Doc Annotator
+    zh_Hans: 文档审核结果
+description:
+  human:
+    en_US: Generate annotated document output with LLM-assisted notes.
+    zh_Hans: 生成带审核意见的文档输出。
+  llm: Generate annotated document output with LLM-assisted notes.
+class_name: DocAnnotatorTool
+parameters:
+  - name: model_config
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: LLM Model
+      zh_Hans: LLM 模型
+    form: form
+    human_description:
+      en_US: The LLM model to use for annotations.
+      zh_Hans: 用于批注生成的 LLM 模型。
+    llm_description: The LLM model to use for annotations.
+  - name: upload_file
+    type: file
+    required: true
+    label:
+      en_US: File
+      zh_Hans: 上传文件
+    form: llm
+    human_description:
+      en_US: The original document file (docx only).
+      zh_Hans: 原始文档文件（仅 docx）。
+    llm_description: The original document file.
+  - name: audit_report
+    type: string
+    required: true
+    label:
+      en_US: Audit Report
+      zh_Hans: 审核报告
+    form: llm
+    human_description:
+      en_US: The aggregated audit report JSON.
+      zh_Hans: 聚合后的审核报告 JSON。
+    llm_description: The aggregated audit report JSON.
+  - name: annotation_style
+    type: string
+    required: false
+    label:
+      en_US: Annotation Style
+      zh_Hans: 批注风格
+    form: llm
+    human_description:
+      en_US: comment only.
+      zh_Hans: 仅支持 comment。
+    llm_description: Annotation style.
+    default: comment
+  - name: output_file_name
+    type: string
+    required: false
+    label:
+      en_US: Output File Name
+      zh_Hans: 输出文件名
+    form: llm
+    human_description:
+      en_US: The output file name without extension.
+      zh_Hans: 输出文件名（不含扩展名）。
+    llm_description: The output file name without extension.
+extra:
+  python:
+    source: tools/doc_annotator.py

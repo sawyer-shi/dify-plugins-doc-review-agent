@@ -1,0 +1,51 @@
+identity:
+  author: "sawyer-shi"
+  name: risk_aggregator
+  label:
+    en_US: Risk Aggregator
+    zh_Hans: 风险聚合器
+description:
+  human:
+    en_US: Aggregate and deduplicate audit risks.
+    zh_Hans: 汇总、去重和合并审核风险。
+  llm: Aggregate and deduplicate audit risks.
+class_name: RiskAggregatorTool
+parameters:
+  - name: model_config
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: LLM Model
+      zh_Hans: LLM 模型
+    form: form
+    human_description:
+      en_US: The LLM model to use for aggregation.
+      zh_Hans: 用于聚合的 LLM 模型。
+    llm_description: The LLM model to use for aggregation.
+  - name: raw_results
+    type: string
+    required: true
+    label:
+      en_US: Raw Results
+      zh_Hans: 原始结果
+    form: llm
+    human_description:
+      en_US: Raw audit results from multiple chunks.
+      zh_Hans: 多个切片的原始审核结果。
+    llm_description: Raw audit results from multiple chunks.
+  - name: merge_policy
+    type: string
+    required: false
+    label:
+      en_US: Merge Policy
+      zh_Hans: 合并策略
+    form: llm
+    human_description:
+      en_US: Policy for conflict resolution.
+      zh_Hans: 冲突合并策略。
+    llm_description: Policy for conflict resolution.
+    default: dedupe_by_quote
+extra:
+  python:
+    source: tools/risk_aggregator.py

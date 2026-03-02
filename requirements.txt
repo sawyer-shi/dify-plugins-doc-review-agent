@@ -1,0 +1,2 @@
+dify_plugin>=0.5.0
+python-docx>=1.1.2

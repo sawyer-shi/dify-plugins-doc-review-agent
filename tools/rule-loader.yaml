@@ -1,0 +1,62 @@
+identity:
+  author: "sawyer-shi"
+  name: rule_loader
+  label:
+    en_US: Rule Loader
+    zh_Hans: 审核规则加载
+description:
+  human:
+    en_US: Load review rules based on document summary.
+    zh_Hans: 基于文档摘要加载审核规则。
+  llm: Load review rules based on document summary.
+class_name: RuleLoaderTool
+parameters:
+  - name: model_config
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: LLM Model
+      zh_Hans: LLM 模型
+    form: form
+    human_description:
+      en_US: The LLM model to use for rule loading.
+      zh_Hans: 用于规则加载的 LLM 模型。
+    llm_description: The LLM model to use for rule loading.
+  - name: doc_summary
+    type: string
+    required: false
+    label:
+      en_US: Document Summary
+      zh_Hans: 文档摘要
+    form: llm
+    human_description:
+      en_US: Summary or preview of the document.
+      zh_Hans: 文档摘要或预览。
+    llm_description: Summary or preview of the document.
+  - name: audit_level
+    type: string
+    required: false
+    label:
+      en_US: Audit Level
+      zh_Hans: 审核级别
+    form: llm
+    human_description:
+      en_US: strict or lenient.
+      zh_Hans: 严格/宽松。
+    llm_description: Audit strictness.
+    default: strict
+  - name: rule_hint
+    type: string
+    required: false
+    label:
+      en_US: Rule Hint
+      zh_Hans: 规则提示
+    form: llm
+    human_description:
+      en_US: Optional hint for rule selection.
+      zh_Hans: 可选规则提示。
+    llm_description: Optional hint for rule selection.
+extra:
+  python:
+    source: tools/rule_loader.py

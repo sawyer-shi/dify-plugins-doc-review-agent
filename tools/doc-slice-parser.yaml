@@ -1,0 +1,62 @@
+identity:
+  author: "sawyer-shi"
+  name: doc_slice_parser
+  label:
+    en_US: Doc Slice Parser
+    zh_Hans: 文档解析切片
+description:
+  human:
+    en_US: Parse and slice a document into review chunks using LLM guidance.
+    zh_Hans: 使用模型辅助将文档解析为审核切片。
+  llm: Parse and slice a document into review chunks using LLM guidance.
+class_name: DocSliceParserTool
+parameters:
+  - name: model_config
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: LLM Model
+      zh_Hans: LLM 模型
+    form: form
+    human_description:
+      en_US: The LLM model to use for parsing.
+      zh_Hans: 用于解析的 LLM 模型。
+    llm_description: The LLM model to use for parsing.
+  - name: upload_file
+    type: file
+    required: true
+    label:
+      en_US: File
+      zh_Hans: 上传文件
+    form: llm
+    human_description:
+      en_US: The document file to parse (docx only).
+      zh_Hans: 要解析的文档文件（仅 docx）。
+    llm_description: The document file to parse.
+  - name: parse_hint
+    type: string
+    required: false
+    label:
+      en_US: Parse Hint
+      zh_Hans: 解析提示
+    form: llm
+    human_description:
+      en_US: Optional hint for parsing strategy.
+      zh_Hans: 可选解析提示。
+    llm_description: Optional hint for parsing strategy.
+  - name: max_chunk_chars
+    type: number
+    required: false
+    label:
+      en_US: Max Chunk Chars
+      zh_Hans: 切片最大字符数
+    form: llm
+    human_description:
+      en_US: Suggested max characters per chunk.
+      zh_Hans: 每个切片的建议最大字符数。
+    llm_description: Suggested max characters per chunk.
+    default: 1200
+extra:
+  python:
+    source: tools/doc_slice_parser.py

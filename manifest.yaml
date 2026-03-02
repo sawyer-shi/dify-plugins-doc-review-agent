@@ -1,0 +1,49 @@
+version: 0.0.1
+type: plugin
+author: sawyer-shi
+name: doc-review-agent
+label:
+  en_US: doc-review-agent
+  zh_Hans: doc-review-agent
+description:
+  en_US: 'Document Review Agent: Supports the review of various types of documents, including tender documents, official documents, contracts, and materials.'
+  zh_Hans: '文档审核Agent：用于标书审核、公文审核、合同审核、资料审核等各种类型的文档审核。'
+icon: icon.svg
+icon_dark: icon-dark.svg
+resource:
+  memory: 268435456
+  permission:
+    tool:
+      enabled: true
+    model:
+      enabled: true
+      llm: true
+      text_embedding: false
+      rerank: false
+      tts: false
+      speech2text: false
+      moderation: false
+    endpoint:
+      enabled: true
+    app:
+      enabled: true
+    storage:
+      enabled: true
+      size: 1048576
+plugins:
+  tools:
+    - provider/doc-review-agent.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: null
+created_at: 2026-03-02T15:58:11.8724113+08:00
+privacy: PRIVACY.md
+repo: https://github.com/sawyer-shi/dify-plugins-doc-review-agent
+verified: false
