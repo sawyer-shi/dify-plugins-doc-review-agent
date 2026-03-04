@@ -23,7 +23,7 @@ class ChunkAuditorTool(Tool):
         system_prompt = f"""
 You are a senior legal reviewer.
 
-Rules:
+Rules input (may be plain checklist, or JSON from rule_loader):
 {rules}
 
 Chunk ID: {chunk_id}
@@ -33,11 +33,15 @@ Text to review:
 {chunk_text}
 
 Task:
+Audit the text by the given rules, and prioritize strict matching to rule_code.
 Return JSON only with the following structure:
 {{
   "chunk_id": {chunk_id},
   "risks": [
     {{
+      "matched_rule_code": "R001",
+      "matched_rule_name": "...",
+      "rule_level": "high|medium|low",
       "severity": "high|medium|low",
       "quote": "exact clause snippet",
       "reason": "why risky",
@@ -46,9 +50,11 @@ Return JSON only with the following structure:
   ]
 }}
 
-Rules:
-1) Only output JSON.
-2) If no risk, return an empty risks array.
+Requirements:
+1) If rule_code exists in rules input, always fill matched_rule_code.
+2) quote must be an exact excerpt from chunk_text.
+3) If no risk, return an empty risks array.
+4) Output JSON only.
 """
 
         messages = [UserPromptMessage(content=system_prompt)]

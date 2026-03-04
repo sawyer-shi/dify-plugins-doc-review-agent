@@ -6,9 +6,9 @@ identity:
     zh_Hans: 文档审核结果
 description:
   human:
-    en_US: Generate annotated document output with LLM-assisted notes.
-    zh_Hans: 生成带审核意见的文档输出。
-  llm: Generate annotated document output with LLM-assisted notes.
+    en_US: Generate native Word comments in format [rule_code][severity] text.
+    zh_Hans: 生成原生 Word 批注，格式为 [rule_code][severity] 文本。
+  llm: Generate native Word comments in format [rule_code][severity] text.
 class_name: DocAnnotatorTool
 parameters:
   - name: model_config

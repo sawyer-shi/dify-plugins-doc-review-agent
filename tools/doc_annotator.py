@@ -51,10 +51,17 @@ Return JSON only with structure:
   "annotations": [
     {{
       "chunk_id": 0,
+      "matched_rule_code": "R001",
+      "severity": "high|medium|low",
       "comment": "short comment text"
     }}
   ]
 }}
+
+Comment style requirements:
+1) Build comment in this style: [R001][high] ...
+2) If matched_rule_code missing, use [NO_RULE].
+3) Keep each comment concise and actionable.
 """
 
             messages = [UserPromptMessage(content=system_prompt)]
@@ -85,6 +92,12 @@ Return JSON only with structure:
                 if not comment_text:
                     continue
 
+                code = str(item.get("matched_rule_code", "")).strip() or "NO_RULE"
+                severity = str(item.get("severity", "")).strip().lower() or "medium"
+                if severity not in ["high", "medium", "low"]:
+                    severity = "medium"
+                final_comment = f"[{code}][{severity}] {comment_text}"
+
                 para = para_map.get(chunk_id)
                 if not para:
                     continue
@@ -92,7 +105,7 @@ Return JSON only with structure:
                 if not runs:
                     run = para.add_run(para.text)
                     runs = [run]
-                doc.add_comment(runs, comment_text, author="DocReview", initials="DR")
+                doc.add_comment(runs, final_comment, author="DocReview", initials="DR")
 
             output_path = os.path.join(os.path.dirname(temp_path), f"{output_file_name}{ext}")
             doc.save(output_path)

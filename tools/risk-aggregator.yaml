@@ -6,9 +6,9 @@ identity:
     zh_Hans: 风险聚合器
 description:
   human:
-    en_US: Aggregate and deduplicate audit risks.
-    zh_Hans: 汇总、去重和合并审核风险。
-  llm: Aggregate and deduplicate audit risks.
+    en_US: Aggregate risks by matched rule_code and quote.
+    zh_Hans: 按 matched_rule_code 和 quote 聚合去重风险。
+  llm: Aggregate risks by matched rule_code and quote.
 class_name: RiskAggregatorTool
 parameters:
   - name: model_config
@@ -45,7 +45,7 @@ parameters:
       en_US: Policy for conflict resolution.
       zh_Hans: 冲突合并策略。
     llm_description: Policy for conflict resolution.
-    default: dedupe_by_quote
+    default: dedupe_by_rule_code_quote
 extra:
   python:
     source: tools/risk_aggregator.py

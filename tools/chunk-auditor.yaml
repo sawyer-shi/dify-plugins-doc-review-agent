@@ -6,9 +6,9 @@ identity:
     zh_Hans: 文档审核
 description:
   human:
-    en_US: Audit a document chunk with rules.
-    zh_Hans: 结合规则审核文档切片。
-  llm: Audit a document chunk with rules.
+    en_US: Audit a document chunk with rules and return matched rule_code.
+    zh_Hans: 结合规则审核文档切片并返回命中的 rule_code。
+  llm: Audit a document chunk with rules and return matched rule_code.
 class_name: ChunkAuditorTool
 parameters:
   - name: model_config
@@ -53,9 +53,9 @@ parameters:
       zh_Hans: 审核规则
     form: llm
     human_description:
-      en_US: Rules text from Rule Loader.
-      zh_Hans: 来自规则加载器的规则文本。
-    llm_description: Rules text from Rule Loader.
+      en_US: Rules payload from Rule Loader, supports JSON or plain text.
+      zh_Hans: 来自规则加载器的规则载荷，支持 JSON 或文本。
+    llm_description: Rules payload from Rule Loader, supports JSON or plain text.
   - name: extra_hint
     type: string
     required: false
