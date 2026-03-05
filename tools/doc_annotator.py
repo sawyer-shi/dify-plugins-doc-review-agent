@@ -7,7 +7,7 @@ from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.entities.model.message import UserPromptMessage
 
-from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm
+from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages
 from docx import Document
 
 
@@ -20,17 +20,20 @@ class DocAnnotatorTool(Tool):
         annotation_style = tool_parameters.get("annotation_style") or "comment"
 
         if not isinstance(llm_model, dict):
-            yield self.create_text_message("Error: model_config invalid.")
+            for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
+                yield m
             return
         if not file_obj:
-            yield self.create_text_message("Error: No file uploaded.")
+            for m in dual_messages(self, "Error: No file uploaded.", {"error": "No file uploaded"}):
+                yield m
             return
 
         temp_path = None
         try:
             temp_path, original_name, ext = save_upload_to_temp(file_obj)
             if ext != ".docx":
-                yield self.create_text_message("Error: Only .docx is supported.")
+                for m in dual_messages(self, "Error: Only .docx is supported.", {"error": "Only .docx is supported"}):
+                    yield m
                 return
 
             if not output_file_name or not str(output_file_name).strip():
@@ -69,7 +72,8 @@ Comment style requirements:
             try:
                 result = invoke_llm(self, llm_model, messages)
             except Exception as e:
-                yield self.create_text_message(f"LLM Error: {str(e)}")
+                for m in dual_messages(self, f"LLM Error: {str(e)}", {"error": f"LLM Error: {str(e)}"}):
+                    yield m
                 return
 
             annotation_json = strip_model_thoughts(result)
@@ -114,6 +118,13 @@ Comment style requirements:
 
             mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             file_name = f"{output_file_name}{ext}"
+            summary_payload = {
+                "status": "ok",
+                "output_file": file_name,
+                "annotation_count": len(annotations),
+            }
+            for m in dual_messages(self, json.dumps(summary_payload, ensure_ascii=False), summary_payload):
+                yield m
             yield self.create_blob_message(blob=data, meta={"mime_type": mime_type, "save_as": file_name, "filename": file_name})
 
         finally:

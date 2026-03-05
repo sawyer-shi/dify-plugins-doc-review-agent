@@ -5,7 +5,7 @@ from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.entities.model.message import UserPromptMessage
 
-from tools.utils import strip_model_thoughts, invoke_llm
+from tools.utils import strip_model_thoughts, invoke_llm, dual_messages, safe_json_load
 
 
 class RiskAggregatorTool(Tool):
@@ -15,7 +15,8 @@ class RiskAggregatorTool(Tool):
         merge_policy = tool_parameters.get("merge_policy") or "dedupe_by_quote"
 
         if not isinstance(llm_model, dict):
-            yield self.create_text_message("Error: model_config invalid.")
+            for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
+                yield m
             return
 
         system_prompt = f"""
@@ -56,8 +57,11 @@ Rules:
         try:
             result = invoke_llm(self, llm_model, messages)
         except Exception as e:
-            yield self.create_text_message(f"LLM Error: {str(e)}")
+            for m in dual_messages(self, f"LLM Error: {str(e)}", {"error": f"LLM Error: {str(e)}"}):
+                yield m
             return
 
         cleaned = strip_model_thoughts(result)
-        yield self.create_text_message(cleaned)
+        payload = safe_json_load(cleaned, {"text": cleaned})
+        for m in dual_messages(self, cleaned, payload):
+            yield m

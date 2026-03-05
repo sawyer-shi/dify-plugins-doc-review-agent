@@ -96,3 +96,14 @@ def invoke_llm(tool: Any, llm_model: Dict[str, Any], messages: List[UserPromptMe
         return getattr(response, "content", str(response))
 
     raise AttributeError("No invoke interface found.")
+
+
+def dual_messages(tool: Any, text: str, payload: Any | None = None) -> List[Any]:
+    out_text = "" if text is None else str(text)
+    if payload is None:
+        parsed = safe_json_load(out_text, None)
+        payload = parsed if parsed is not None else {"text": out_text}
+    return [
+        tool.create_text_message(out_text),
+        tool.create_json_message(payload),
+    ]

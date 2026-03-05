@@ -7,7 +7,7 @@ from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.entities.model.message import UserPromptMessage
 
-from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm
+from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages
 from docx import Document
 
 
@@ -19,10 +19,12 @@ class DocSliceParserTool(Tool):
         max_chunk_chars = tool_parameters.get("max_chunk_chars", 1200)
 
         if not isinstance(llm_model, dict):
-            yield self.create_text_message("Error: model_config invalid.")
+            for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
+                yield m
             return
         if not file_obj:
-            yield self.create_text_message("Error: No file uploaded.")
+            for m in dual_messages(self, "Error: No file uploaded.", {"error": "No file uploaded"}):
+                yield m
             return
 
         temp_path = None
@@ -30,7 +32,8 @@ class DocSliceParserTool(Tool):
             temp_path, original_name, ext = save_upload_to_temp(file_obj)
 
             if ext != ".docx":
-                yield self.create_text_message("Error: Only .docx is supported.")
+                for m in dual_messages(self, "Error: Only .docx is supported.", {"error": "Only .docx is supported"}):
+                    yield m
                 return
 
             doc = Document(temp_path)
@@ -102,7 +105,8 @@ Return JSON only with structure:
             try:
                 result = invoke_llm(self, llm_model, messages)
             except Exception as e:
-                yield self.create_text_message(f"LLM Error: {str(e)}")
+                for m in dual_messages(self, f"LLM Error: {str(e)}", {"error": f"LLM Error: {str(e)}"}):
+                    yield m
                 return
 
             cleaned = strip_model_thoughts(result)
@@ -122,7 +126,9 @@ Return JSON only with structure:
                 chunk["title"] = title
 
             output = {"summary": summary_text, "chunks": chunks}
-            yield self.create_text_message(json.dumps(output, ensure_ascii=True))
+            out_text = json.dumps(output, ensure_ascii=False)
+            for m in dual_messages(self, out_text, output):
+                yield m
 
         finally:
             clean_paths([temp_path] if temp_path else [])

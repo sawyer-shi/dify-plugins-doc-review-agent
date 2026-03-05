@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 
-from tools.utils import save_upload_to_temp, clean_paths
+from tools.utils import save_upload_to_temp, clean_paths, dual_messages
 
 
 class RuleLoaderTool(Tool):
@@ -16,7 +16,8 @@ class RuleLoaderTool(Tool):
         rules_file = tool_parameters.get("rules_file")
 
         if not rules_file:
-            yield self.create_text_message("Error: rules_file is required.")
+            for m in dual_messages(self, "Error: rules_file is required.", {"error": "rules_file is required"}):
+                yield m
             return
 
         required_fields = ["rule_code", "rule_name", "rule_level", "rule_prompt"]
@@ -36,7 +37,9 @@ class RuleLoaderTool(Tool):
                                 continue
                             missing = [k for k in required_fields if k not in reader.fieldnames]
                             if missing:
-                                yield self.create_text_message(f"Error: Missing fields in rules csv: {', '.join(missing)}")
+                                msg = f"Error: Missing fields in rules csv: {', '.join(missing)}"
+                                for m in dual_messages(self, msg, {"error": msg}):
+                                    yield m
                                 return
                             for row in reader:
                                 rows.append({k: str(row.get(k, "")).strip() for k in required_fields})
@@ -45,7 +48,8 @@ class RuleLoaderTool(Tool):
                     except Exception:
                         continue
                 if not loaded:
-                    yield self.create_text_message("Error: Failed to read rules csv file.")
+                    for m in dual_messages(self, "Error: Failed to read rules csv file.", {"error": "Failed to read rules csv file"}):
+                        yield m
                     return
             elif ext == ".xlsx":
                 wb = load_workbook(temp_path, data_only=True)
@@ -55,7 +59,9 @@ class RuleLoaderTool(Tool):
                 header_map = {h: idx for idx, h in enumerate(headers)}
                 missing = [k for k in required_fields if k not in header_map]
                 if missing:
-                    yield self.create_text_message(f"Error: Missing fields in rules xlsx: {', '.join(missing)}")
+                    msg = f"Error: Missing fields in rules xlsx: {', '.join(missing)}"
+                    for m in dual_messages(self, msg, {"error": msg}):
+                        yield m
                     return
 
                 for values in ws.iter_rows(min_row=2, values_only=True):
@@ -70,12 +76,14 @@ class RuleLoaderTool(Tool):
                     if not is_empty:
                         rows.append(item)
             else:
-                yield self.create_text_message("Error: rules_file must be .csv or .xlsx")
+                for m in dual_messages(self, "Error: rules_file must be .csv or .xlsx", {"error": "rules_file must be .csv or .xlsx"}):
+                    yield m
                 return
 
             rows = [r for r in rows if r.get("rule_code") and r.get("rule_prompt")]
             if not rows:
-                yield self.create_text_message("Error: No valid rules loaded from rules_file.")
+                for m in dual_messages(self, "Error: No valid rules loaded from rules_file.", {"error": "No valid rules loaded from rules_file"}):
+                    yield m
                 return
 
             checklist = []
@@ -88,7 +96,9 @@ class RuleLoaderTool(Tool):
                 "rules": rows,
                 "rules_text": "\n".join(checklist),
             }
-            yield self.create_text_message(json.dumps(payload, ensure_ascii=False))
+            out_text = json.dumps(payload, ensure_ascii=False)
+            for m in dual_messages(self, out_text, payload):
+                yield m
 
         finally:
             clean_paths([temp_path] if temp_path else [])
