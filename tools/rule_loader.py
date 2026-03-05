@@ -86,15 +86,9 @@ class RuleLoaderTool(Tool):
                     yield m
                 return
 
-            checklist = []
-            for idx, r in enumerate(rows, start=1):
-                checklist.append(
-                    f"{idx}. [{r['rule_code']}][{r['rule_level']}] {r['rule_name']}: {r['rule_prompt']}"
-                )
-
             payload = {
                 "rules": rows,
-                "rules_text": "\n".join(checklist),
+                "rule_count": len(rows),
             }
             out_text = json.dumps(payload, ensure_ascii=False)
             for m in dual_messages(self, out_text, payload):

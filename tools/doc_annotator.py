@@ -103,6 +103,16 @@ Comment style requirements:
                 final_comment = f"[{code}][{severity}] {comment_text}"
 
                 para = para_map.get(chunk_id)
+                if para is None:
+                    refs = item.get("element_refs", [])
+                    if isinstance(refs, list) and refs:
+                        first_ref = str(refs[0])
+                        if first_ref.startswith("p:"):
+                            try:
+                                pid = int(first_ref.split(":", 1)[1])
+                                para = para_map.get(pid)
+                            except Exception:
+                                para = None
                 if not para:
                     continue
                 runs = list(para.runs)

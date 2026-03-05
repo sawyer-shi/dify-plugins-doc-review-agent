@@ -6,9 +6,9 @@ identity:
     zh_Hans: 文档审核
 description:
   human:
-    en_US: Audit a document chunk with rules and return matched rule_code.
-    zh_Hans: 结合规则审核文档切片并返回命中的 rule_code。
-  llm: Audit a document chunk with rules and return matched rule_code.
+    en_US: Audit all chunks against all rules (double loop) from text inputs.
+    zh_Hans: 对切片与规则执行双循环审核（来自两个 text 输入）。
+  llm: Audit all chunks against all rules (double loop) from text inputs.
 class_name: ChunkAuditorTool
 parameters:
   - name: model_config
@@ -23,39 +23,28 @@ parameters:
       en_US: The LLM model to use for auditing.
       zh_Hans: 用于审核的 LLM 模型。
     llm_description: The LLM model to use for auditing.
-  - name: chunk_text
+  - name: doc_slices_text
     type: string
     required: true
     label:
-      en_US: Chunk Text
-      zh_Hans: 切片文本
+      en_US: Doc Slices Text
+      zh_Hans: 切片结果文本
     form: llm
     human_description:
-      en_US: The text chunk to review.
-      zh_Hans: 待审核的文本切片。
-    llm_description: The text chunk to review.
-  - name: chunk_id
-    type: number
+      en_US: Text output from doc_slice_parser (JSON string).
+      zh_Hans: 来自 doc_slice_parser 的 text 输出（JSON 字符串）。
+    llm_description: Text output from doc_slice_parser (JSON string).
+  - name: rules_text
+    type: string
     required: true
     label:
-      en_US: Chunk ID
-      zh_Hans: 切片ID
+      en_US: Rules Text
+      zh_Hans: 规则结果文本
     form: llm
     human_description:
-      en_US: Chunk identifier.
-      zh_Hans: 切片编号。
-    llm_description: Chunk identifier.
-  - name: rules
-    type: string
-    required: false
-    label:
-      en_US: Rules
-      zh_Hans: 审核规则
-    form: llm
-    human_description:
-      en_US: Rules payload from Rule Loader, supports JSON or plain text.
-      zh_Hans: 来自规则加载器的规则载荷，支持 JSON 或文本。
-    llm_description: Rules payload from Rule Loader, supports JSON or plain text.
+      en_US: Text output from rule_loader (JSON string).
+      zh_Hans: 来自 rule_loader 的 text 输出（JSON 字符串）。
+    llm_description: Text output from rule_loader (JSON string).
   - name: extra_hint
     type: string
     required: false
