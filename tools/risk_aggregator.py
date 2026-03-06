@@ -13,7 +13,7 @@ class RiskAggregatorTool(Tool):
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         llm_model = tool_parameters.get("model_config")
         raw_results = tool_parameters.get("raw_results") or ""
-        merge_policy = tool_parameters.get("merge_policy") or "dedupe_by_rule_code_quote"
+        merge_policy = tool_parameters.get("merge_policy") or "dedupe_by_rule_code_quote_location"
 
         if not isinstance(llm_model, dict):
             for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
@@ -31,7 +31,31 @@ class RiskAggregatorTool(Tool):
                 quote = str(item.get("quote", "")).strip()
                 if not quote:
                     quote = str(item.get("reason", "")).strip()[:80]
-                key = (code, quote)
+                chunk_id = item.get("chunk_id")
+                ref0 = ""
+                refs = item.get("element_refs", [])
+                if isinstance(refs, list) and refs:
+                    ref0 = str(refs[0])
+                chunk_hash = str(item.get("chunk_hash", "")).strip()
+                meta0 = ""
+                emeta = item.get("element_meta", [])
+                if isinstance(emeta, list) and emeta:
+                    first = emeta[0]
+                    if isinstance(first, dict):
+                        meta0 = str(first.get("para_hash", "")).strip()
+
+                if merge_policy == "dedupe_by_quote":
+                    key = ("ANY", quote)
+                elif merge_policy == "dedupe_by_rule_code":
+                    key = (code, "ANY")
+                elif merge_policy == "dedupe_by_chunk_rule":
+                    key = (f"{chunk_id}", code)
+                elif merge_policy == "dedupe_by_rule_code_quote_location":
+                    key = (f"{code}|{quote}", f"{chunk_id}|{ref0}|{meta0}|{chunk_hash}")
+                elif merge_policy == "no_dedupe":
+                    key = (f"{code}:{quote}:{len(dedup)}", "UNIQUE")
+                else:
+                    key = (code, quote)
 
                 incoming = dict(item)
                 sev = str(incoming.get("severity", "")).strip().lower()
@@ -127,5 +151,9 @@ Rules:
 
         cleaned = strip_model_thoughts(result)
         payload = safe_json_load(cleaned, {"text": cleaned})
+        if isinstance(payload, dict) and payload.get("text") == cleaned:
+            for m in dual_messages(self, "Error: Invalid JSON from aggregator model.", {"error": "Invalid JSON from aggregator model"}):
+                yield m
+            return
         for m in dual_messages(self, cleaned, payload):
             yield m

@@ -6,7 +6,7 @@ from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.entities.model.message import UserPromptMessage
 
-from tools.utils import strip_model_thoughts, invoke_llm, dual_messages, safe_json_load
+from tools.utils import strip_model_thoughts, invoke_llm, dual_messages, safe_json_load, detect_text_language
 
 
 class ChunkAuditorTool(Tool):
@@ -15,6 +15,7 @@ class ChunkAuditorTool(Tool):
         doc_slices_text = tool_parameters.get("doc_slices_text") or ""
         rules_text = tool_parameters.get("rules_text") or ""
         extra_hint = tool_parameters.get("extra_hint") or ""
+        output_language = str(tool_parameters.get("output_language") or "auto").strip().lower()
 
         if not isinstance(llm_model, dict):
             for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
@@ -40,6 +41,12 @@ class ChunkAuditorTool(Tool):
                 yield m
             return
 
+        if output_language == "auto":
+            joined = "\n".join([str(c.get("text", "")) for c in chunks[:8]])
+            output_language = detect_text_language(joined)
+        if output_language not in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
+            output_language = "en"
+
         results: list[dict[str, Any]] = []
         total_pairs = 0
 
@@ -47,6 +54,8 @@ class ChunkAuditorTool(Tool):
             chunk_id = chunk.get("chunk_id")
             chunk_text = str(chunk.get("text", ""))
             element_refs = chunk.get("element_refs", [])
+            element_meta = chunk.get("element_meta", [])
+            chunk_hash = str(chunk.get("chunk_hash", "")).strip()
             if not chunk_text.strip():
                 continue
 
@@ -88,6 +97,7 @@ Return JSON only:
 Requirements:
 1) quote must be exact text from chunk when hit=true.
 2) if hit=false, keep quote/reason/suggestion empty string.
+3) reason and suggestion language must be {output_language}.
 3) output JSON only.
 """
                 messages = [UserPromptMessage(content=system_prompt)]
@@ -102,8 +112,14 @@ Requirements:
                 cleaned = strip_model_thoughts(result)
                 one = safe_json_load(cleaned, {})
                 if not isinstance(one, dict):
-                    continue
+                    for m in dual_messages(self, "Error: Invalid JSON from auditor model.", {"error": "Invalid JSON from auditor model"}):
+                        yield m
+                    return
                 if not bool(one.get("hit")):
+                    continue
+
+                quote = str(one.get("quote", "")).strip()
+                if quote and quote not in chunk_text:
                     continue
 
                 severity = str(one.get("severity", "")).strip().lower()
@@ -112,12 +128,14 @@ Requirements:
 
                 results.append({
                     "chunk_id": chunk_id,
+                    "chunk_hash": chunk_hash,
                     "element_refs": element_refs,
+                    "element_meta": element_meta,
                     "matched_rule_code": rule_code,
                     "matched_rule_name": rule_name,
                     "rule_level": rule_level if rule_level in ["high", "medium", "low"] else "medium",
                     "severity": severity,
-                    "quote": str(one.get("quote", "")).strip(),
+                    "quote": quote,
                     "reason": str(one.get("reason", "")).strip(),
                     "suggestion": str(one.get("suggestion", "")).strip(),
                 })
@@ -126,6 +144,7 @@ Requirements:
             "audit_results": results,
             "total_pairs": total_pairs,
             "total_hits": len(results),
+            "output_language": output_language,
         }
         out_text = json.dumps(payload, ensure_ascii=False)
         for m in dual_messages(self, out_text, payload):

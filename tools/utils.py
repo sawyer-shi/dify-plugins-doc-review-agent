@@ -107,3 +107,26 @@ def dual_messages(tool: Any, text: str, payload: Any | None = None) -> List[Any]
         tool.create_text_message(out_text),
         tool.create_json_message(payload),
     ]
+
+
+def detect_text_language(text: str) -> str:
+    if not text:
+        return "en"
+
+    sample = text[:5000]
+    zh = len(re.findall(r"[\u4e00-\u9fff]", sample))
+    ja = len(re.findall(r"[\u3040-\u30ff]", sample))
+    ko = len(re.findall(r"[\uac00-\ud7af]", sample))
+    ar = len(re.findall(r"[\u0600-\u06ff]", sample))
+    latin = len(re.findall(r"[A-Za-z]", sample))
+
+    max_count = max(zh, ja, ko, ar, latin)
+    if max_count == zh and zh > 0:
+        return "zh"
+    if max_count == ja and ja > 0:
+        return "ja"
+    if max_count == ko and ko > 0:
+        return "ko"
+    if max_count == ar and ar > 0:
+        return "ar"
+    return "en"

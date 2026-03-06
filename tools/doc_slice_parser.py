@@ -2,6 +2,7 @@ from collections.abc import Generator
 from typing import Any, Dict, List
 import json
 import os
+import hashlib
 
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
@@ -40,11 +41,13 @@ class DocSliceParserTool(Tool):
             paragraphs = []
             for idx, p in enumerate(doc.paragraphs):
                 text = (p.text or "").strip()
-                paragraphs.append({"para_id": idx, "text": text})
+                para_hash = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12] if text else ""
+                paragraphs.append({"para_id": idx, "text": text, "para_hash": para_hash})
 
             chunks: List[Dict[str, Any]] = []
             current_texts: List[str] = []
             current_refs: List[str] = []
+            current_para_hashes: List[Dict[str, Any]] = []
             current_len = 0
             chunk_id = 0
 
@@ -60,22 +63,29 @@ class DocSliceParserTool(Tool):
                         "title": "",
                         "text": chunk_text,
                         "element_refs": current_refs,
+                        "element_meta": current_para_hashes,
+                        "chunk_hash": hashlib.sha1(chunk_text.encode("utf-8")).hexdigest()[:16],
                     })
                     chunk_id += 1
                     current_texts = []
                     current_refs = []
+                    current_para_hashes = []
                     current_len = 0
 
                 current_texts.append(text)
                 current_refs.append(ref)
+                current_para_hashes.append({"ref": ref, "para_hash": item["para_hash"]})
                 current_len += len(text) + 1
 
             if current_texts:
+                chunk_text = "\n".join(current_texts)
                 chunks.append({
                     "chunk_id": chunk_id,
                     "title": "",
-                    "text": "\n".join(current_texts),
+                    "text": chunk_text,
                     "element_refs": current_refs,
+                    "element_meta": current_para_hashes,
+                    "chunk_hash": hashlib.sha1(chunk_text.encode("utf-8")).hexdigest()[:16],
                 })
 
             preview_blocks = []
@@ -119,7 +129,9 @@ Return JSON only with structure:
                     if isinstance(item, dict) and "chunk_id" in item:
                         titles_map[int(item["chunk_id"])] = str(item.get("title", ""))
             except Exception:
-                summary_text = ""
+                for m in dual_messages(self, "Error: Invalid JSON from parser model.", {"error": "Invalid JSON from parser model"}):
+                    yield m
+                return
 
             for chunk in chunks:
                 title = titles_map.get(chunk["chunk_id"], "")

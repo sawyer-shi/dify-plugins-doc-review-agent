@@ -2,12 +2,13 @@ from collections.abc import Generator
 from typing import Any
 import os
 import json
+import hashlib
 
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.entities.model.message import UserPromptMessage
 
-from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages
+from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages, safe_json_load, detect_text_language
 from docx import Document
 
 
@@ -18,6 +19,7 @@ class DocAnnotatorTool(Tool):
         audit_report = tool_parameters.get("audit_report") or ""
         output_file_name = tool_parameters.get("output_file_name")
         annotation_style = tool_parameters.get("annotation_style") or "comment"
+        output_language = str(tool_parameters.get("output_language") or "auto").strip().lower()
 
         if not isinstance(llm_model, dict):
             for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
@@ -40,86 +42,210 @@ class DocAnnotatorTool(Tool):
                 base, _ = os.path.splitext(original_name)
                 output_file_name = f"reviewed_{base}"
 
-            system_prompt = f"""
-You are a document annotation assistant.
+            report_payload = safe_json_load(audit_report, {})
+            if output_language == "auto":
+                lang_from_report = ""
+                if isinstance(report_payload, dict):
+                    lang_from_report = str(
+                        report_payload.get("output_language")
+                        or report_payload.get("language")
+                        or report_payload.get("summary", {}).get("output_language", "")
+                    ).strip().lower()
+                if lang_from_report in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
+                    output_language = lang_from_report
+                else:
+                    doc = Document(temp_path)
+                    probe = "\n".join([p.text for p in doc.paragraphs[:20]])
+                    output_language = detect_text_language(probe)
+            if output_language not in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
+                output_language = "en"
 
-Audit report (JSON or text):
-{audit_report}
-
-Annotation style: {annotation_style}
-
-Task:
-Return JSON only with structure:
-{{
-  "annotations": [
-    {{
-      "chunk_id": 0,
-      "matched_rule_code": "R001",
-      "severity": "high|medium|low",
-      "comment": "short comment text"
-    }}
-  ]
-}}
-
-Comment style requirements:
-1) Build comment in this style: [R001][high] ...
-2) If matched_rule_code missing, use [NO_RULE].
-3) Keep each comment concise and actionable.
-"""
-
-            messages = [UserPromptMessage(content=system_prompt)]
-
-            try:
-                result = invoke_llm(self, llm_model, messages)
-            except Exception as e:
-                for m in dual_messages(self, f"LLM Error: {str(e)}", {"error": f"LLM Error: {str(e)}"}):
+            risks = []
+            if isinstance(report_payload, dict):
+                if isinstance(report_payload.get("risks"), list):
+                    risks = report_payload.get("risks", [])
+                elif isinstance(report_payload.get("audit_results"), list):
+                    risks = report_payload.get("audit_results", [])
+            if not risks:
+                for m in dual_messages(self, "Error: audit_report has no risks/audit_results list.", {"error": "audit_report has no risks/audit_results list"}):
                     yield m
                 return
 
-            annotation_json = strip_model_thoughts(result)
-            annotations = []
-            try:
-                parsed = json.loads(annotation_json)
-                annotations = parsed.get("annotations", [])
-            except Exception:
-                annotations = []
-
             doc = Document(temp_path)
             para_map = {idx: p for idx, p in enumerate(doc.paragraphs)}
+            para_hash_map = {
+                idx: hashlib.sha1((p.text or "").strip().encode("utf-8")).hexdigest()[:12]
+                for idx, p in para_map.items()
+            }
+            hash_to_pids: dict[str, list[int]] = {}
+            for idx, ph in para_hash_map.items():
+                hash_to_pids.setdefault(ph, []).append(idx)
+            annotation_count = 0
+            located_by_quote = 0
+            located_by_ref = 0
+            located_by_chunk = 0
+            located_by_hash = 0
 
-            for item in annotations:
-                try:
-                    chunk_id = int(item.get("chunk_id"))
-                except Exception:
-                    continue
-                comment_text = str(item.get("comment", "")).strip()
-                if not comment_text:
+            placed_count_by_pid: dict[int, int] = {}
+
+            for item in risks:
+                if not isinstance(item, dict):
                     continue
 
                 code = str(item.get("matched_rule_code", "")).strip() or "NO_RULE"
                 severity = str(item.get("severity", "")).strip().lower() or "medium"
                 if severity not in ["high", "medium", "low"]:
                     severity = "medium"
-                final_comment = f"[{code}][{severity}] {comment_text}"
 
-                para = para_map.get(chunk_id)
-                if para is None:
-                    refs = item.get("element_refs", [])
-                    if isinstance(refs, list) and refs:
-                        first_ref = str(refs[0])
-                        if first_ref.startswith("p:"):
+                reason = str(item.get("reason", "")).strip()
+                suggestion = str(item.get("suggestion", "")).strip()
+                quote = str(item.get("quote", "")).strip()
+
+                comment_prompt = f"""
+You are a legal annotation assistant.
+Language: {output_language}
+
+Risk info:
+- rule_code: {code}
+- severity: {severity}
+- quote: {quote}
+- reason: {reason}
+- suggestion: {suggestion}
+
+Task:
+Generate ONE concise annotation sentence (no JSON) in {output_language}.
+"""
+
+                try:
+                    result = invoke_llm(self, llm_model, [UserPromptMessage(content=comment_prompt)])
+                    comment_text = strip_model_thoughts(result).strip()
+                except Exception as e:
+                    for m in dual_messages(self, f"LLM Error: {str(e)}", {"error": f"LLM Error: {str(e)}"}):
+                        yield m
+                    return
+
+                if not comment_text:
+                    comment_text = reason or suggestion or "Risk detected."
+
+                para = None
+                pid = None
+                refs = item.get("element_refs", [])
+                candidate_pids: list[int] = []
+                candidate_hashes: list[str] = []
+
+                emeta = item.get("element_meta", [])
+                if isinstance(emeta, list):
+                    for meta_item in emeta:
+                        if isinstance(meta_item, dict):
+                            ph = str(meta_item.get("para_hash", "")).strip()
+                            if ph:
+                                candidate_hashes.append(ph)
+
+                if candidate_hashes:
+                    for ph in candidate_hashes:
+                        for cand in hash_to_pids.get(ph, []):
+                            if cand not in candidate_pids:
+                                candidate_pids.append(cand)
+
+                if isinstance(refs, list) and refs:
+                    for one_ref in refs:
+                        sref = str(one_ref)
+                        if sref.startswith("p:"):
                             try:
-                                pid = int(first_ref.split(":", 1)[1])
-                                para = para_map.get(pid)
+                                cand = int(sref.split(":", 1)[1])
                             except Exception:
-                                para = None
+                                continue
+                            if cand in para_map:
+                                candidate_pids.append(cand)
+                            used = placed_count_by_pid.get(cand, 0)
+                            if used == 0 and cand in para_map:
+                                pid = cand
+                                break
+
+                    if pid is None:
+                        for one_ref in refs:
+                            sref = str(one_ref)
+                            if sref.startswith("p:"):
+                                try:
+                                    cand = int(sref.split(":", 1)[1])
+                                except Exception:
+                                    continue
+                                if cand in para_map:
+                                    pid = cand
+                                    break
+
+                if pid is None:
+                    chunk_id_val = item.get("chunk_id")
+                    if chunk_id_val is not None:
+                        try:
+                            cand = int(chunk_id_val)
+                            if cand in para_map:
+                                pid = cand
+                        except Exception:
+                            pid = None
+
+                if pid is not None:
+                    para = para_map.get(pid)
+
                 if not para:
                     continue
+
+                # Prefer paragraph that really contains quote text.
+                if quote and candidate_pids:
+                    for cand in candidate_pids:
+                        ptxt = para_map[cand].text or ""
+                        if quote in ptxt:
+                            para = para_map[cand]
+                            pid = cand
+                            break
+
+                if para is None and candidate_hashes:
+                    for ph in candidate_hashes:
+                        for cand in hash_to_pids.get(ph, []):
+                            para = para_map.get(cand)
+                            pid = cand
+                            if para is not None:
+                                break
+                        if para is not None:
+                            break
+
+                if para is None:
+                    continue
+
+                if quote and pid is not None and quote in (para.text or ""):
+                    located_by_quote += 1
+                elif pid is not None and candidate_hashes:
+                    located_by_hash += 1
+                elif pid is not None and candidate_pids:
+                    located_by_ref += 1
+                elif pid is not None:
+                    located_by_chunk += 1
+
+                final_comment = f"[{code}][{severity}] {comment_text}"
                 runs = list(para.runs)
                 if not runs:
                     run = para.add_run(para.text)
                     runs = [run]
-                doc.add_comment(runs, final_comment, author="DocReview", initials="DR")
+
+                target_run = None
+                if quote:
+                    for r in runs:
+                        rtxt = r.text or ""
+                        if rtxt and quote in rtxt:
+                            target_run = r
+                            break
+                if target_run is None:
+                    for r in runs:
+                        if (r.text or "").strip():
+                            target_run = r
+                            break
+                if target_run is None:
+                    target_run = runs[0]
+
+                doc.add_comment([target_run], final_comment, author="DocReview", initials="DR")
+                if pid is not None:
+                    placed_count_by_pid[pid] = placed_count_by_pid.get(pid, 0) + 1
+                annotation_count += 1
 
             output_path = os.path.join(os.path.dirname(temp_path), f"{output_file_name}{ext}")
             doc.save(output_path)
@@ -131,7 +257,12 @@ Comment style requirements:
             summary_payload = {
                 "status": "ok",
                 "output_file": file_name,
-                "annotation_count": len(annotations),
+                "annotation_count": annotation_count,
+                "output_language": output_language,
+                "located_by_quote": located_by_quote,
+                "located_by_hash": located_by_hash,
+                "located_by_ref": located_by_ref,
+                "located_by_chunk": located_by_chunk,
             }
             for m in dual_messages(self, json.dumps(summary_payload, ensure_ascii=False), summary_payload):
                 yield m

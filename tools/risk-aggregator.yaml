@@ -35,7 +35,7 @@ parameters:
       zh_Hans: 多个切片的原始审核结果。
     llm_description: Raw audit results from multiple chunks.
   - name: merge_policy
-    type: string
+    type: select
     required: false
     label:
       en_US: Merge Policy
@@ -45,7 +45,32 @@ parameters:
       en_US: Policy for conflict resolution.
       zh_Hans: 冲突合并策略。
     llm_description: Policy for conflict resolution.
-    default: dedupe_by_rule_code_quote
+    default: dedupe_by_rule_code_quote_location
+    options:
+      - value: dedupe_by_rule_code_quote_location
+        label:
+          en_US: Rule+Quote+Location (recommended)
+          zh_Hans: 规则+引用+位置（推荐）
+      - value: dedupe_by_rule_code_quote
+        label:
+          en_US: Rule+Quote (recommended)
+          zh_Hans: 规则+引用（推荐）
+      - value: dedupe_by_quote
+        label:
+          en_US: Quote only
+          zh_Hans: 仅按引用去重
+      - value: dedupe_by_rule_code
+        label:
+          en_US: Rule only
+          zh_Hans: 仅按规则去重
+      - value: dedupe_by_chunk_rule
+        label:
+          en_US: Chunk+Rule
+          zh_Hans: 按切片+规则去重
+      - value: no_dedupe
+        label:
+          en_US: No dedupe
+          zh_Hans: 不去重
 extra:
   python:
     source: tools/risk_aggregator.py

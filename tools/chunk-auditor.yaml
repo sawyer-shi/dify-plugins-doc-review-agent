@@ -56,6 +56,63 @@ parameters:
       en_US: Optional extra hint.
       zh_Hans: 可选额外提示。
     llm_description: Optional extra hint.
+  - name: output_language
+    type: select
+    required: false
+    label:
+      en_US: Output Language
+      zh_Hans: 输出语言
+    form: llm
+    human_description:
+      en_US: Output language. auto means detect from document text.
+      zh_Hans: 输出语言。auto 表示根据文档文本自动识别。
+    llm_description: Output language. auto means detect from document text.
+    default: auto
+    options:
+      - value: zh
+        label:
+          en_US: Chinese
+          zh_Hans: 中文
+      - value: en
+        label:
+          en_US: English
+          zh_Hans: 英文
+      - value: auto
+        label:
+          en_US: Auto Detect
+          zh_Hans: 自动识别
+      - value: ja
+        label:
+          en_US: Japanese
+          zh_Hans: 日文
+      - value: ko
+        label:
+          en_US: Korean
+          zh_Hans: 韩文
+      - value: es
+        label:
+          en_US: Spanish
+          zh_Hans: 西班牙文
+      - value: fr
+        label:
+          en_US: French
+          zh_Hans: 法文
+      - value: de
+        label:
+          en_US: German
+          zh_Hans: 德文
+      - value: pt
+        label:
+          en_US: Portuguese
+          zh_Hans: 葡萄牙文
+      - value: ru
+        label:
+          en_US: Russian
+          zh_Hans: 俄文
+      - value: ar
+        label:
+          en_US: Arabic
+          zh_Hans: 阿拉伯文
 extra:
   python:
     source: tools/chunk_auditor.py
