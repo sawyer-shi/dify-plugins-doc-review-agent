@@ -67,49 +67,49 @@ parameters:
       en_US: Output language. auto means detect from document text.
       zh_Hans: 输出语言。auto 表示根据文档文本自动识别。
     llm_description: Output language. auto means detect from document text.
-    default: auto
+    default: "auto"
     options:
-      - value: zh
+      - value: "zh"
         label:
           en_US: Chinese
           zh_Hans: 中文
-      - value: en
+      - value: "en"
         label:
           en_US: English
           zh_Hans: 英文
-      - value: auto
+      - value: "auto"
         label:
           en_US: Auto Detect
           zh_Hans: 自动识别
-      - value: ja
+      - value: "ja"
         label:
           en_US: Japanese
           zh_Hans: 日文
-      - value: ko
+      - value: "ko"
         label:
           en_US: Korean
           zh_Hans: 韩文
-      - value: es
+      - value: "es"
         label:
           en_US: Spanish
           zh_Hans: 西班牙文
-      - value: fr
+      - value: "fr"
         label:
           en_US: French
           zh_Hans: 法文
-      - value: de
+      - value: "de"
         label:
           en_US: German
           zh_Hans: 德文
-      - value: pt
+      - value: "pt"
         label:
           en_US: Portuguese
           zh_Hans: 葡萄牙文
-      - value: ru
+      - value: "ru"
         label:
           en_US: Russian
           zh_Hans: 俄文
-      - value: ar
+      - value: "ar"
         label:
           en_US: Arabic
           zh_Hans: 阿拉伯文

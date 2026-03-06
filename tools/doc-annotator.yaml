@@ -3,7 +3,7 @@ identity:
   name: doc_annotator
   label:
     en_US: Doc Annotator
-    zh_Hans: 文档审核结果
+    zh_Hans: 文档最终批注生成
 description:
   human:
     en_US: Generate native Word comments in format [rule_code][severity] text.
@@ -68,63 +68,27 @@ parameters:
       en_US: The output file name without extension.
       zh_Hans: 输出文件名（不含扩展名）。
     llm_description: The output file name without extension.
-  - name: output_language
+  - name: apply_to_original
     type: select
     required: false
     label:
-      en_US: Output Language
-      zh_Hans: 输出语言
+      en_US: Apply to Original
+      zh_Hans: 是否修改原文
     form: llm
     human_description:
-      en_US: Comment language. auto means detect from uploaded document/audit report.
-      zh_Hans: 批注语言。auto 表示根据上传文档/审核结果自动识别。
-    llm_description: Comment language. auto means detect from uploaded document/audit report.
-    default: auto
+      en_US: no=only comments, yes=modify original text and add before/after in comments.
+      zh_Hans: no=仅批注，yes=按建议修改原文并在批注写原文与修改后。
+    llm_description: Whether to apply suggested edits to original text.
+    default: "no"
     options:
-      - value: zh
+      - value: "no"
         label:
-          en_US: Chinese
-          zh_Hans: 中文
-      - value: en
+          en_US: "No"
+          zh_Hans: 否
+      - value: "yes"
         label:
-          en_US: English
-          zh_Hans: 英文
-      - value: auto
-        label:
-          en_US: Auto Detect
-          zh_Hans: 自动识别
-      - value: ja
-        label:
-          en_US: Japanese
-          zh_Hans: 日文
-      - value: ko
-        label:
-          en_US: Korean
-          zh_Hans: 韩文
-      - value: es
-        label:
-          en_US: Spanish
-          zh_Hans: 西班牙文
-      - value: fr
-        label:
-          en_US: French
-          zh_Hans: 法文
-      - value: de
-        label:
-          en_US: German
-          zh_Hans: 德文
-      - value: pt
-        label:
-          en_US: Portuguese
-          zh_Hans: 葡萄牙文
-      - value: ru
-        label:
-          en_US: Russian
-          zh_Hans: 俄文
-      - value: ar
-        label:
-          en_US: Arabic
-          zh_Hans: 阿拉伯文
+          en_US: "Yes"
+          zh_Hans: 是
 extra:
   python:
     source: tools/doc_annotator.py

@@ -96,9 +96,10 @@ Return JSON only:
 
 Requirements:
 1) quote must be exact text from chunk when hit=true.
-2) if hit=false, keep quote/reason/suggestion empty string.
-3) reason and suggestion language must be {output_language}.
-3) output JSON only.
+2) quote must be a single-line span (no newline) and length 20-120 characters.
+3) if hit=false, keep quote/reason/suggestion empty string.
+4) reason and suggestion language must be {output_language}.
+5) output JSON only.
 """
                 messages = [UserPromptMessage(content=system_prompt)]
 
@@ -120,6 +121,10 @@ Requirements:
 
                 quote = str(one.get("quote", "")).strip()
                 if quote and quote not in chunk_text:
+                    continue
+                if "\n" in quote or "\r" in quote:
+                    continue
+                if len(quote) < 20 or len(quote) > 120:
                     continue
 
                 severity = str(one.get("severity", "")).strip().lower()

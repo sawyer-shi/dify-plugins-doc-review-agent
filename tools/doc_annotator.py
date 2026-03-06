@@ -19,7 +19,8 @@ class DocAnnotatorTool(Tool):
         audit_report = tool_parameters.get("audit_report") or ""
         output_file_name = tool_parameters.get("output_file_name")
         annotation_style = tool_parameters.get("annotation_style") or "comment"
-        output_language = str(tool_parameters.get("output_language") or "auto").strip().lower()
+        apply_to_original = str(tool_parameters.get("apply_to_original") or "no").strip().lower()
+        apply_changes = apply_to_original in ["yes", "true", "1"]
 
         if not isinstance(llm_model, dict):
             for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
@@ -43,20 +44,20 @@ class DocAnnotatorTool(Tool):
                 output_file_name = f"reviewed_{base}"
 
             report_payload = safe_json_load(audit_report, {})
-            if output_language == "auto":
-                lang_from_report = ""
-                if isinstance(report_payload, dict):
-                    lang_from_report = str(
-                        report_payload.get("output_language")
-                        or report_payload.get("language")
-                        or report_payload.get("summary", {}).get("output_language", "")
-                    ).strip().lower()
-                if lang_from_report in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
-                    output_language = lang_from_report
-                else:
-                    doc = Document(temp_path)
-                    probe = "\n".join([p.text for p in doc.paragraphs[:20]])
-                    output_language = detect_text_language(probe)
+            output_language = ""
+            lang_from_report = ""
+            if isinstance(report_payload, dict):
+                lang_from_report = str(
+                    report_payload.get("output_language")
+                    or report_payload.get("language")
+                    or report_payload.get("summary", {}).get("output_language", "")
+                ).strip().lower()
+            if lang_from_report in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
+                output_language = lang_from_report
+            else:
+                doc = Document(temp_path)
+                probe = "\n".join([p.text for p in doc.paragraphs[:20]])
+                output_language = detect_text_language(probe)
             if output_language not in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
                 output_language = "en"
 
@@ -81,6 +82,9 @@ class DocAnnotatorTool(Tool):
             for idx, ph in para_hash_map.items():
                 hash_to_pids.setdefault(ph, []).append(idx)
             annotation_count = 0
+            skipped_count = 0
+            mislocated_count = 0
+            modified_count = 0
             located_by_quote = 0
             located_by_ref = 0
             located_by_chunk = 0
@@ -126,6 +130,30 @@ Generate ONE concise annotation sentence (no JSON) in {output_language}.
 
                 if not comment_text:
                     comment_text = reason or suggestion or "Risk detected."
+
+                rewrite_prompt = f"""
+You are a contract editing assistant.
+Language: {output_language}
+
+Original text:
+{quote}
+
+Revision instruction:
+{suggestion}
+
+Task:
+Return one revised replacement text for the original text, concise and directly usable.
+Output plain text only.
+"""
+                revised_text = ""
+                if quote and suggestion:
+                    try:
+                        revised_resp = invoke_llm(self, llm_model, [UserPromptMessage(content=rewrite_prompt)])
+                        revised_text = strip_model_thoughts(revised_resp).strip()
+                    except Exception:
+                        revised_text = ""
+                if not revised_text:
+                    revised_text = suggestion or quote
 
                 para = None
                 pid = None
@@ -210,6 +238,7 @@ Generate ONE concise annotation sentence (no JSON) in {output_language}.
                             break
 
                 if para is None:
+                    skipped_count += 1
                     continue
 
                 if quote and pid is not None and quote in (para.text or ""):
@@ -220,6 +249,12 @@ Generate ONE concise annotation sentence (no JSON) in {output_language}.
                     located_by_ref += 1
                 elif pid is not None:
                     located_by_chunk += 1
+
+                # Hard validation: if original quote not in anchor paragraph, skip writing comment.
+                if quote and quote not in (para.text or ""):
+                    mislocated_count += 1
+                    skipped_count += 1
+                    continue
 
                 final_comment = f"[{code}][{severity}] {comment_text}"
                 runs = list(para.runs)
@@ -242,7 +277,34 @@ Generate ONE concise annotation sentence (no JSON) in {output_language}.
                 if target_run is None:
                     target_run = runs[0]
 
-                doc.add_comment([target_run], final_comment, author="DocReview", initials="DR")
+                # Optionally modify source text.
+                if apply_changes and quote and revised_text:
+                    changed = False
+                    if target_run is not None and quote in (target_run.text or ""):
+                        target_run.text = (target_run.text or "").replace(quote, revised_text, 1)
+                        changed = True
+                    elif quote in (para.text or ""):
+                        para.text = (para.text or "").replace(quote, revised_text, 1)
+                        runs2 = list(para.runs)
+                        if runs2:
+                            target_run = runs2[0]
+                        changed = True
+                    if changed:
+                        modified_count += 1
+
+                if output_language == "zh":
+                    original_label = "原文"
+                    after_label = "修改后"
+                else:
+                    original_label = "Original"
+                    after_label = "After modification"
+
+                original_for_comment = quote or (para.text or "")[:120]
+                after_for_comment = revised_text or suggestion or original_for_comment
+                detail_block = f"【{original_label}】：{original_for_comment}\n【{after_label}】：{after_for_comment}"
+
+                full_comment = f"{final_comment}\n{detail_block}"
+                doc.add_comment([target_run], full_comment, author="DocReview", initials="DR")
                 if pid is not None:
                     placed_count_by_pid[pid] = placed_count_by_pid.get(pid, 0) + 1
                 annotation_count += 1
@@ -258,11 +320,15 @@ Generate ONE concise annotation sentence (no JSON) in {output_language}.
                 "status": "ok",
                 "output_file": file_name,
                 "annotation_count": annotation_count,
+                "modified_count": modified_count,
+                "apply_to_original": apply_changes,
                 "output_language": output_language,
                 "located_by_quote": located_by_quote,
                 "located_by_hash": located_by_hash,
                 "located_by_ref": located_by_ref,
                 "located_by_chunk": located_by_chunk,
+                "skipped_count": skipped_count,
+                "mislocated_count": mislocated_count,
             }
             for m in dual_messages(self, json.dumps(summary_payload, ensure_ascii=False), summary_payload):
                 yield m
