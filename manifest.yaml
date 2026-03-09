@@ -1,5 +1,8 @@
 version: 0.0.1
 type: plugin
+tags: 
+  - productivity
+  - utilities
 author: sawyer-shi
 name: doc-review-agent
 label:

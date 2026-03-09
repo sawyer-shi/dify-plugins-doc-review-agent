@@ -1,8 +1,195 @@
-## doc-review-agent
+# Document Review Agent
 
-**Author:** sawyer-shi
-**Version:** 0.0.1
-**Type:** tool
+A powerful Dify plugin providing comprehensive AI-powered document review capabilities for various types of documents including tender documents, official documents, contracts, and materials. Supports intelligent document parsing, rule-based auditing, risk aggregation, and annotated document generation with professional-grade quality and flexible configuration options.
 
-### Description
-Document review plugin with 5 tools: parse and slice, load rules, audit chunks, aggregate risks, and output annotated files. Each tool invokes the selected LLM model.
+## Version Information
+
+- **Current Version**: v0.0.1
+- **Release Date**: 2026-03-02
+- **Compatibility**: Dify Plugin Framework
+- **Python Version**: 3.12
+
+### Version History
+- **v0.0.1** (2026-03-02): Initial release with document review capabilities
+
+## Quick Start
+
+1. Install plugin in your Dify environment
+2. Configure your LLM model settings
+3. Upload your document and start the review process
+
+## Key Features
+
+- **Intelligent Document Parsing**: Parse and slice documents into manageable chunks using LLM guidance
+- **Rule-Based Auditing**: Load review rules and audit document chunks against them
+- **Risk Aggregation**: Aggregate and deduplicate audit risks from multiple chunks
+- **Document Annotation**: Generate annotated documents with AI-assisted comments
+- **Flexible Configuration**: Support for custom review rules and audit levels
+- **Multiple Document Types**: Supports tender documents, official documents, contracts, and materials
+- **Batch Processing**: Efficient processing of large documents through chunking
+- **LLM Integration**: Leverages configured LLM models for intelligent analysis
+
+## Core Features
+
+### Document Parsing
+
+#### Doc Slice Parser (doc_slice_parser)
+Parse and slice a document into review chunks using LLM guidance.
+- **Features**:
+  - Intelligent document slicing based on content structure
+  - Configurable maximum chunk size (default: 1200 characters)
+  - Support for parse hints to guide slicing strategy
+  - LLM-assisted chunk boundary detection
+  - Optimized for docx format documents
+
+### Rule Management
+
+#### Rule Loader (rule_loader)
+Load review rules based on document summary and audit requirements.
+- **Features**:
+  - Dynamic rule selection based on document type
+  - Support for different audit levels (strict/lenient)
+  - Customizable rule hints for specific scenarios
+  - Document summary-based rule matching
+  - Flexible rule configuration
+
+### Document Auditing
+
+#### Chunk Auditor (chunk_auditor)
+Audit a document chunk with loaded rules.
+- **Features**:
+  - Rule-based risk detection
+  - Detailed risk identification and categorization
+  - Quote-based risk referencing
+  - Extra hint support for enhanced auditing
+  - Comprehensive chunk-level analysis
+
+### Risk Management
+
+#### Risk Aggregator (risk_aggregator)
+Aggregate and deduplicate audit risks from multiple chunks.
+- **Features**:
+  - Intelligent risk deduplication
+  - Multiple merge policies (dedupe_by_quote, etc.)
+  - Risk categorization and prioritization
+  - Comprehensive risk summary generation
+  - Conflict resolution strategies
+
+### Document Output
+
+#### Doc Annotator (doc_annotator)
+Generate annotated document output with LLM-assisted notes.
+- **Features**:
+  - Comment-style annotation generation
+  - Original document preservation
+  - Risk-based comment insertion
+  - Configurable output file naming
+  - Support for docx format output
+
+## Technical Advantages
+
+- **LLM-Powered Analysis**: Leverages advanced LLM models for intelligent document understanding
+- **Rule-Based Auditing**: Flexible rule system for customizable review criteria
+- **Chunk-Based Processing**: Efficient handling of large documents through intelligent slicing
+- **Risk Deduplication**: Smart aggregation to eliminate redundant findings
+- **Annotated Output**: Professional document output with clear risk indicators
+- **Multi-Format Support**: Optimized for docx format with extensibility for other formats
+- **Configurable Audit Levels**: Support for strict and lenient auditing modes
+- **Real-Time Processing**: Efficient workflow for timely document review
+
+## Requirements
+
+- Python 3.12
+- Dify Platform access
+- Configured LLM model
+- Required Python packages (installed via requirements.txt):
+  - dify_plugin>=0.5.0
+  - python-docx>=1.1.2
+  - openpyxl>=3.1.5
+
+## Installation & Configuration
+
+1. Install required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Configure your LLM model in plugin settings
+
+3. Install plugin in your Dify environment
+
+## Usage
+
+### Document Review Workflow
+
+#### Step 1: Document Parsing
+Use **Doc Slice Parser** to parse your document:
+- **Parameters**:
+  - `upload_file`: The document file to parse (docx only, required)
+  - `model_config`: The LLM model to use for parsing (required)
+  - `parse_hint`: Optional hint for parsing strategy
+  - `max_chunk_chars`: Suggested max characters per chunk (default: 1200)
+
+#### Step 2: Load Review Rules
+Use **Rule Loader** to load appropriate review rules:
+- **Parameters**:
+  - `model_config`: The LLM model to use for rule loading (required)
+  - `doc_summary`: Summary or preview of the document
+  - `audit_level`: Audit strictness (strict/lenient, default: strict)
+  - `rule_hint`: Optional hint for rule selection
+
+#### Step 3: Audit Document Chunks
+Use **Chunk Auditor** to audit each document chunk:
+- **Parameters**:
+  - `model_config`: The LLM model to use for auditing (required)
+  - `chunk_text`: The text chunk to review (required)
+  - `chunk_id`: Chunk identifier (required)
+  - `rules`: Rules text from Rule Loader
+  - `extra_hint`: Optional extra hint
+
+#### Step 4: Aggregate Risks
+Use **Risk Aggregator** to combine audit results:
+- **Parameters**:
+  - `model_config`: The LLM model to use for aggregation (required)
+  - `raw_results`: Raw audit results from multiple chunks (required)
+  - `merge_policy`: Policy for conflict resolution (default: dedupe_by_quote)
+
+#### Step 5: Generate Annotated Document
+Use **Doc Annotator** to create the final output:
+- **Parameters**:
+  - `model_config`: The LLM model to use for annotations (required)
+  - `upload_file`: The original document file (docx only, required)
+  - `audit_report`: The aggregated audit report JSON (required)
+  - `annotation_style`: Annotation style (default: comment)
+  - `output_file_name`: The output file name without extension
+
+## Supported Document Formats
+
+- **Input**: .docx (Microsoft Word)
+- **Output**: .docx (Microsoft Word with annotations)
+
+## Notes
+
+- Document parsing is optimized for docx format
+- Chunk size can be adjusted based on document complexity
+- Audit level affects the strictness of rule application
+- Risk aggregation uses intelligent deduplication to avoid redundant findings
+- Annotation style currently supports comment-based annotations
+- Large documents are processed efficiently through chunking
+- All tools require a configured LLM model for operation
+
+## Developer Information
+
+- **Author**: `https://github.com/sawyer-shi`
+- **Email**: sawyer36@foxmail.com
+- **License**: Apache License 2.0
+- **Source Code**: `https://github.com/sawyer-shi/dify-plugins-doc-review-agent`
+- **Support**: Through Dify platform and GitHub Issues
+
+## License Notice
+
+This project is licensed under Apache License 2.0. See [LICENSE](LICENSE) file for full license text.
+
+---
+
+**Ready to review your documents with AI-powered intelligence?**
