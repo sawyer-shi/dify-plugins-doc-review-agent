@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: rule_loader
   label:
-    en_US: Rule Loader
-    zh_Hans: 审核规则加载
+    en_US: 2.Rule Loader
+    zh_Hans: 2.审核规则加载
 description:
   human:
     en_US: Load review rules from xlsx/csv without model filtering.

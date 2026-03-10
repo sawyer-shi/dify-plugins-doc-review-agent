@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: risk_aggregator
   label:
-    en_US: Risk Aggregator
-    zh_Hans: 风险聚合器
+    en_US: 4.Risk Aggregator
+    zh_Hans: 4.风险聚合器
 description:
   human:
     en_US: Aggregate risks by matched rule_code and quote.

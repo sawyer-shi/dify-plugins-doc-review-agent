@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: doc_slice_parser
   label:
-    en_US: Doc Slice Parser
-    zh_Hans: 文档解析切片
+    en_US: 1.Doc Slice Parser
+    zh_Hans: 1.文档解析切片
 description:
   human:
     en_US: Parse and slice a document into review chunks using LLM guidance.

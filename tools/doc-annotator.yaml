@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: doc_annotator
   label:
-    en_US: Doc Annotator
-    zh_Hans: 文档最终批注生成
+    en_US: 5.Doc Annotator
+    zh_Hans: 5.批注生成
 description:
   human:
     en_US: Generate native Word comments in format [rule_code][severity] text.

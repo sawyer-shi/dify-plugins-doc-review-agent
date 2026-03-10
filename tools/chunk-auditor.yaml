@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: chunk_auditor
   label:
-    en_US: Chunk Auditor
-    zh_Hans: 文档审核
+    en_US: 3.Chunk Auditor
+    zh_Hans: 3.文档审核
 description:
   human:
     en_US: Audit all chunks against all rules (double loop) from text inputs.
