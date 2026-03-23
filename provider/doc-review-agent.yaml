@@ -55,6 +55,7 @@ tools:
   - tools/doc-slice-parser.yaml
   - tools/rule-loader.yaml
   - tools/chunk-auditor.yaml
+  - tools/chunk-auditor-slice.yaml
   - tools/risk-aggregator.yaml
   - tools/doc-annotator.yaml
 extra:

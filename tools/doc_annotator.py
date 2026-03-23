@@ -43,7 +43,12 @@ class DocAnnotatorTool(Tool):
                 base, _ = os.path.splitext(original_name)
                 output_file_name = f"reviewed_{base}"
 
-            report_payload = safe_json_load(audit_report, {})
+            if isinstance(audit_report, dict):
+                report_payload = audit_report
+            else:
+                report_payload = safe_json_load(audit_report, {})
+            if isinstance(report_payload, str):
+                report_payload = safe_json_load(report_payload, {})
             output_language = ""
             lang_from_report = ""
             if isinstance(report_payload, dict):
@@ -61,16 +66,34 @@ class DocAnnotatorTool(Tool):
             if output_language not in ["zh", "en", "ja", "ko", "es", "fr", "de", "pt", "ru", "ar"]:
                 output_language = "en"
 
-            risks = []
-            if isinstance(report_payload, dict):
-                if isinstance(report_payload.get("risks"), list):
-                    risks = report_payload.get("risks", [])
-                elif isinstance(report_payload.get("audit_results"), list):
-                    risks = report_payload.get("audit_results", [])
+            def _collect_risks(obj: Any) -> list[dict[str, Any]]:
+                out: list[dict[str, Any]] = []
+                if isinstance(obj, str):
+                    parsed = safe_json_load(obj, None)
+                    if parsed is not None:
+                        out.extend(_collect_risks(parsed))
+                    return out
+                if isinstance(obj, list):
+                    for one in obj:
+                        out.extend(_collect_risks(one))
+                    return out
+                if isinstance(obj, dict):
+                    if isinstance(obj.get("risks"), list):
+                        out.extend([x for x in obj.get("risks", []) if isinstance(x, dict)])
+                    if isinstance(obj.get("audit_results"), list):
+                        out.extend([x for x in obj.get("audit_results", []) if isinstance(x, dict)])
+                    if isinstance(obj.get("json"), list):
+                        for j in obj.get("json", []):
+                            out.extend(_collect_risks(j))
+                    if isinstance(obj.get("text"), str):
+                        out.extend(_collect_risks(obj.get("text")))
+                return out
+
+            risks = _collect_risks(report_payload)
             if not risks:
                 for m in dual_messages(self, "Error: audit_report has no risks/audit_results list.", {"error": "audit_report has no risks/audit_results list"}):
                     yield m
-                return
+                    return
 
             doc = Document(temp_path)
             para_map = {idx: p for idx, p in enumerate(doc.paragraphs)}
@@ -211,6 +234,16 @@ Output plain text only.
                                 pid = cand
                         except Exception:
                             pid = None
+
+                pid_para_text = (para_map[pid].text or "") if (pid is not None and pid in para_map) else ""
+                if quote and pid is not None and quote not in pid_para_text:
+                    found_pid = None
+                    for cand_idx, cand_para in para_map.items():
+                        if quote in (cand_para.text or ""):
+                            found_pid = cand_idx
+                            break
+                    if found_pid is not None:
+                        pid = found_pid
 
                 if pid is not None:
                     para = para_map.get(pid)

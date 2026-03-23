@@ -22,10 +22,21 @@ class ChunkAuditorTool(Tool):
                 yield m
             return
 
-        slices_payload = safe_json_load(doc_slices_text, None)
-        rules_payload = safe_json_load(rules_text, None)
-        if not isinstance(slices_payload, dict) or not isinstance(slices_payload.get("chunks"), list):
-            for m in dual_messages(self, "Error: doc_slices_text must be JSON with chunks list.", {"error": "Invalid doc_slices_text"}):
+        if isinstance(doc_slices_text, dict):
+            slices_payload = doc_slices_text
+        else:
+            slices_payload = safe_json_load(doc_slices_text, None)
+        if isinstance(slices_payload, str):
+            slices_payload = safe_json_load(slices_payload, None)
+        if isinstance(rules_text, dict):
+            rules_payload = rules_text
+        else:
+            rules_payload = safe_json_load(rules_text, None)
+        if isinstance(rules_payload, str):
+            rules_payload = safe_json_load(rules_payload, None)
+
+        if not isinstance(slices_payload, dict):
+            for m in dual_messages(self, "Error: doc_slices_text must be JSON object.", {"error": "Invalid doc_slices_text"}):
                 yield m
             return
         if not isinstance(rules_payload, dict) or not isinstance(rules_payload.get("rules"), list):
@@ -33,7 +44,15 @@ class ChunkAuditorTool(Tool):
                 yield m
             return
 
-        chunks = slices_payload.get("chunks", [])
+        if isinstance(slices_payload.get("chunks"), list):
+            chunks = slices_payload.get("chunks", [])
+        elif str(slices_payload.get("text", "")).strip():
+            chunks = [slices_payload]
+        else:
+            for m in dual_messages(self, "Error: doc_slices_text must be JSON with chunks list or single chunk object.", {"error": "Invalid doc_slices_text"}):
+                yield m
+            return
+
         rules = rules_payload.get("rules", [])
         if not chunks or not rules:
             payload = {"audit_results": [], "total_pairs": 0, "total_hits": 0}

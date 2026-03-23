@@ -20,11 +20,41 @@ class RiskAggregatorTool(Tool):
                 yield m
             return
 
-        raw_payload = safe_json_load(raw_results, None)
-        if isinstance(raw_payload, dict) and isinstance(raw_payload.get("audit_results"), list):
+        def _collect_hits(obj: Any) -> list[dict[str, Any]]:
+            hits: list[dict[str, Any]] = []
+
+            if isinstance(obj, str):
+                parsed = safe_json_load(obj, None)
+                if parsed is not None:
+                    hits.extend(_collect_hits(parsed))
+                return hits
+
+            if isinstance(obj, list):
+                for one in obj:
+                    hits.extend(_collect_hits(one))
+                return hits
+
+            if isinstance(obj, dict):
+                if isinstance(obj.get("audit_results"), list):
+                    hits.extend([x for x in obj.get("audit_results", []) if isinstance(x, dict)])
+                if isinstance(obj.get("risks"), list):
+                    hits.extend([x for x in obj.get("risks", []) if isinstance(x, dict)])
+                if isinstance(obj.get("json"), list):
+                    for j in obj.get("json", []):
+                        hits.extend(_collect_hits(j))
+                if isinstance(obj.get("text"), str):
+                    hits.extend(_collect_hits(obj.get("text")))
+                return hits
+
+            return hits
+
+        raw_payload = raw_results if isinstance(raw_results, (dict, list)) else safe_json_load(raw_results, None)
+        collected_hits = _collect_hits(raw_payload)
+
+        if collected_hits:
             dedup: dict[tuple[str, str], dict[str, Any]] = {}
             severity_rank = {"low": 1, "medium": 2, "high": 3}
-            for item in raw_payload.get("audit_results", []):
+            for item in collected_hits:
                 if not isinstance(item, dict):
                     continue
                 code = str(item.get("matched_rule_code", "")).strip() or "NO_RULE"
@@ -88,9 +118,9 @@ class RiskAggregatorTool(Tool):
             payload = {
                 "risks": merged,
                 "summary": {
-                    "input_hits": len(raw_payload.get("audit_results", [])),
+                    "input_hits": len(collected_hits),
                     "output_hits": len(merged),
-                    "total_pairs": raw_payload.get("total_pairs", 0),
+                    "total_pairs": raw_payload.get("total_pairs", 0) if isinstance(raw_payload, dict) else 0,
                 },
                 "merge_policy": merge_policy,
             }
