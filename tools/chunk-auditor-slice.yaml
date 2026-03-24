@@ -53,8 +53,8 @@ parameters:
       zh_Hans: 额外提示
     form: llm
     human_description:
-      en_US: Optional extra hint.
-      zh_Hans: 可选额外提示。
+      en_US: Optional extra hint. For example, "I am the first party" or "I am the second party".
+      zh_Hans: 可选额外提示(例如：我是甲方 或 我是乙方)。
     llm_description: Optional extra hint.
   - name: output_language
     type: select

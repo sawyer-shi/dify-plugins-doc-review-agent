@@ -46,8 +46,8 @@ parameters:
       zh_Hans: 聚合后的审核报告 JSON。
     llm_description: The aggregated audit report JSON.
   - name: annotation_style
-    type: string
-    required: false
+    type: select
+    required: true
     label:
       en_US: Annotation Style
       zh_Hans: 批注风格
@@ -57,6 +57,11 @@ parameters:
       zh_Hans: 仅支持 comment。
     llm_description: Annotation style.
     default: comment
+    options:
+      - value: comment
+        label:
+          en_US: Comment
+          zh_Hans: 批注
   - name: output_file_name
     type: string
     required: false
