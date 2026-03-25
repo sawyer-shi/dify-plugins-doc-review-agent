@@ -5,12 +5,12 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 ## Version Information
 
 - **Current Version**: v0.0.1
-- **Release Date**: 2026-03-02
+- **Release Date**: 2026-03-22
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
 
 ### Version History
-- **v0.0.1** (2026-03-02): Initial release with document review capabilities
+- **v0.0.1** (2026-03-22): Initial release with document review capabilities
 
 ## Quick Start
 
@@ -56,13 +56,25 @@ Load review rules based on document summary and audit requirements.
 ### Document Auditing
 
 #### Chunk Auditor (chunk_auditor)
-Audit a document chunk with loaded rules.
+Audit a document chunk with loaded rules using dual-loop processing.
 - **Features**:
-  - Rule-based risk detection
+  - Rule-based risk detection with dual-loop architecture
   - Detailed risk identification and categorization
   - Quote-based risk referencing
   - Extra hint support for enhanced auditing
+  - Multi-language output support (Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Arabic)
   - Comprehensive chunk-level analysis
+  - Built-in chunk and rule loops for efficient processing
+
+#### Chunk Auditor Slice (chunk_auditor_slice)
+Audit a single chunk object against all rules using rule-loop only (requires outer loop).
+- **Features**:
+  - Single chunk object processing
+  - Rule-loop only architecture (chunk processed once, rules loop internally)
+  - Requires outer loop for multiple chunks
+  - Multi-language output support (Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Arabic)
+  - Auto language detection capability
+  - Optimized for batch processing workflows
 
 ### Risk Management
 
