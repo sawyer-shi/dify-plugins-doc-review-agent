@@ -34,17 +34,57 @@ parameters:
       en_US: The document file to parse (docx only).
       zh_Hans: 要解析的文档文件（仅 docx）。
     llm_description: The document file to parse.
-  - name: parse_hint
-    type: string
+  - name: slice_strategy
+    type: select
     required: false
     label:
-      en_US: Parse Hint
-      zh_Hans: 解析提示
+      en_US: Slice Strategy
+      zh_Hans: 切片策略
     form: llm
     human_description:
-      en_US: Optional hint for parsing strategy.
-      zh_Hans: 可选解析提示。
-    llm_description: Optional hint for parsing strategy.
+      en_US: |-
+        Controls how chunks are split before review.
+        - Default: current behavior, accumulate paragraphs by max_chunk_chars.
+        - by_heading: start new chunk on heading-like lines, plus max_chunk_chars guard.
+        - by_article: start new chunk on article/clause-like lines, plus max_chunk_chars guard.
+        - by_paragraph: one paragraph per chunk (long paragraph is hard-split by max_chunk_chars).
+        - by_sentence: sentence-level grouping, then pack by max_chunk_chars.
+        - hybrid: split on heading OR article boundaries, then apply max_chunk_chars.
+      zh_Hans: |-
+        控制审核前的切片方式。
+        - 默认：沿用当前逻辑，按段落累加并受 max_chunk_chars 限制。
+        - by_heading：遇到“标题样式”段落优先断块，再受 max_chunk_chars 限制。
+        - by_article：遇到“条款样式”段落优先断块，再受 max_chunk_chars 限制。
+        - by_paragraph：一段一片（超长段会按 max_chunk_chars 再切分）。
+        - by_sentence：按句子切分后再按 max_chunk_chars 聚合。
+        - hybrid：标题边界或条款边界任一命中即断块，再受 max_chunk_chars 限制。
+    llm_description: "Select chunk splitting strategy: default/by_heading/by_article/by_paragraph/by_sentence/hybrid."
+    default: ""
+    options:
+      - value: ""
+        label:
+          en_US: Default
+          zh_Hans: 默认
+      - value: "by_heading"
+        label:
+          en_US: By Heading
+          zh_Hans: 按标题
+      - value: "by_article"
+        label:
+          en_US: By Article
+          zh_Hans: 按条款
+      - value: "by_paragraph"
+        label:
+          en_US: By Paragraph
+          zh_Hans: 按段落
+      - value: "by_sentence"
+        label:
+          en_US: By Sentence
+          zh_Hans: 按句子
+      - value: "hybrid"
+        label:
+          en_US: Hybrid
+          zh_Hans: 混合
   - name: max_chunk_chars
     type: number
     required: false
