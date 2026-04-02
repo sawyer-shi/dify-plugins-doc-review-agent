@@ -2,8 +2,8 @@ identity:
   author: "sawyer-shi"
   name: chunk_auditor
   label:
-    en_US: 3.Chunk Auditor--Double Loop(No Need An Outer Loop)
-    zh_Hans: 3.文档审核--自带双循环(不需要添加外循环)
+    en_US: 3.Chunk Auditor--Multi-threaded(Double Loop)
+    zh_Hans: 3.文档审核--支持多线程处理(自带双循环)
 description:
   human:
     en_US: Audit all chunks against all rules (double loop) from text inputs.
@@ -115,10 +115,10 @@ parameters:
           zh_Hans: 阿拉伯文
   - name: thread_num
     type: number
-    required: false
+    required: true
     label:
       en_US: Thread Number
-      zh_Hans: 线程数
+      zh_Hans: 并发处理线程数
     form: llm
     human_description:
       en_US: Number of worker threads for chunk grouping. Defaults to 1.
