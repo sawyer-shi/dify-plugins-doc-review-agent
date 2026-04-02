@@ -113,6 +113,18 @@ parameters:
         label:
           en_US: Arabic
           zh_Hans: 阿拉伯文
+  - name: thread_num
+    type: number
+    required: false
+    label:
+      en_US: Thread Number
+      zh_Hans: 线程数
+    form: llm
+    human_description:
+      en_US: Number of worker threads for chunk grouping. Defaults to 1.
+      zh_Hans: 用于切片分组处理的高并发线程数(基于机器性能和任务复杂度设置)，默认值为 1。
+    llm_description: Number of worker threads for chunk grouping. Defaults to 1.
+    default: 1
 extra:
   python:
     source: tools/chunk_auditor.py
