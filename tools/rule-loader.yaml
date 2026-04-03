@@ -1,0 +1,27 @@
+identity:
+  author: "sawyer-shi"
+  name: rule_loader
+  label:
+    en_US: 2.Rule Loader
+    zh_Hans: 2.审核规则加载
+description:
+  human:
+    en_US: Load review rules from xlsx/csv without model filtering.
+    zh_Hans: 从 xlsx/csv 直接加载审核规则，不做模型筛选。
+  llm: Load review rules from xlsx/csv without model filtering.
+class_name: RuleLoaderTool
+parameters:
+  - name: rules_file
+    type: file
+    required: true
+    label:
+      en_US: Rules File
+      zh_Hans: 规则文件
+    form: llm
+    human_description:
+      en_US: Upload a rules file in .xlsx or .csv format.
+      zh_Hans: 上传 .xlsx 或 .csv 规则文件。
+    llm_description: Rules file in .xlsx or .csv format.
+extra:
+  python:
+    source: tools/rule_loader.py
