@@ -187,6 +187,15 @@
   - `annotation_style`: 批注风格（默认：comment）
   - `output_file_name`: 不含扩展名的输出文件名
 
+#### 步骤 6: 合并/修正文档
+使用**文件修正**工具处理批注文档，合并重叠批注并可选修改原文：
+- **参数**:
+  - `model_config`: 用于语义合并/选择的 LLM 模型（必需）
+  - `upload_file`: 文档批注生成工具输出的 docx（必需）
+  - `merge_strategy`: `keep_highest_risk` / `keep_semantic` / `merge_semantic`（必需）
+  - `apply_to_original`: `no`/`yes`（必填，默认：`no`）
+  - `output_file_name`: 不含扩展名的输出文件名
+
 ## 支持的文档格式
 
 - **输入**: .docx（Microsoft Word）

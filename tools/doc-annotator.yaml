@@ -27,8 +27,8 @@ parameters:
     type: file
     required: true
     label:
-      en_US: File
-      zh_Hans: 上传文件
+      en_US: Original Document File
+      zh_Hans: 上传原始文档文件
     form: llm
     human_description:
       en_US: The original document file (docx only).
@@ -73,27 +73,6 @@ parameters:
       en_US: The output file name without extension.
       zh_Hans: 输出文件名（不含扩展名）。
     llm_description: The output file name without extension.
-  - name: apply_to_original
-    type: select
-    required: false
-    label:
-      en_US: Apply to Original
-      zh_Hans: 是否修改原文
-    form: llm
-    human_description:
-      en_US: no=only comments, yes=modify original text and add before/after in comments.
-      zh_Hans: no=仅批注，yes=按建议修改原文并在批注写原文与修改后。
-    llm_description: Whether to apply suggested edits to original text.
-    default: "no"
-    options:
-      - value: "no"
-        label:
-          en_US: "No"
-          zh_Hans: 否
-      - value: "yes"
-        label:
-          en_US: "Yes"
-          zh_Hans: 是
 extra:
   python:
     source: tools/doc_annotator.py

@@ -19,8 +19,6 @@ class DocAnnotatorTool(Tool):
         audit_report = tool_parameters.get("audit_report") or ""
         output_file_name = tool_parameters.get("output_file_name")
         annotation_style = tool_parameters.get("annotation_style") or "comment"
-        apply_to_original = str(tool_parameters.get("apply_to_original") or "no").strip().lower()
-        apply_changes = apply_to_original in ["yes", "true", "1"]
 
         if not isinstance(llm_model, dict):
             for m in dual_messages(self, "Error: model_config invalid.", {"error": "model_config invalid"}):
@@ -107,7 +105,6 @@ class DocAnnotatorTool(Tool):
             annotation_count = 0
             skipped_count = 0
             mislocated_count = 0
-            modified_count = 0
             located_by_quote = 0
             located_by_ref = 0
             located_by_chunk = 0
@@ -310,21 +307,6 @@ Output plain text only.
                 if target_run is None:
                     target_run = runs[0]
 
-                # Optionally modify source text.
-                if apply_changes and quote and revised_text:
-                    changed = False
-                    if target_run is not None and quote in (target_run.text or ""):
-                        target_run.text = (target_run.text or "").replace(quote, revised_text, 1)
-                        changed = True
-                    elif quote in (para.text or ""):
-                        para.text = (para.text or "").replace(quote, revised_text, 1)
-                        runs2 = list(para.runs)
-                        if runs2:
-                            target_run = runs2[0]
-                        changed = True
-                    if changed:
-                        modified_count += 1
-
                 if output_language == "zh":
                     original_label = "原文"
                     after_label = "修改后"
@@ -353,8 +335,6 @@ Output plain text only.
                 "status": "ok",
                 "output_file": file_name,
                 "annotation_count": annotation_count,
-                "modified_count": modified_count,
-                "apply_to_original": apply_changes,
                 "output_language": output_language,
                 "located_by_quote": located_by_quote,
                 "located_by_hash": located_by_hash,
