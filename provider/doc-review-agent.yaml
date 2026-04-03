@@ -57,6 +57,7 @@ tools:
   - tools/chunk-auditor.yaml
   - tools/risk-aggregator.yaml
   - tools/doc-annotator.yaml
+  - tools/file-revision.yaml
 extra:
   python:
     source: provider/doc-review-agent.py
