@@ -38,7 +38,8 @@
 - **多种文档类型**: 支持标书、公文、合同和资料
 - **批量处理**: 通过切片高效处理大型文档
 - **LLM 集成**: 利用配置的 LLM 模型进行智能分析
-<img width="409" height="684" alt="EN" src="https://github.com/user-attachments/assets/097c6095-2c9f-45be-ba57-eba41b396d84" /><img width="411" height="644" alt="CN" src="https://github.com/user-attachments/assets/e7db9fb0-6780-4c3e-b39d-98a40dee74a2" />
+
+  <img width="409" height="684" alt="EN" src="https://github.com/user-attachments/assets/097c6095-2c9f-45be-ba57-eba41b396d84" /><img width="411" height="644" alt="CN" src="https://github.com/user-attachments/assets/e7db9fb0-6780-4c3e-b39d-98a40dee74a2" />
 
 
 
