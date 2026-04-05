@@ -1,8 +1,8 @@
 # Privacy Policy / 隐私政策
 
-**Effective Date / 生效日期**: March 22, 2026 / 2026年3月22日
+**Effective Date / 生效日期**: April 5, 2026 / 2026年4月5日
 **Version / 版本**: v0.0.1
-**Plugin Name / 插件名称**: Document Review Agent / 文档审核Agent
+**Plugin Name / 插件名称**: LocalDocument Review Agent / 本地文档审核Agent
 **License / 许可证**: Apache License 2.0
 
 ---

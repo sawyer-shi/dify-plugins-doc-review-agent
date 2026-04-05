@@ -11,7 +11,7 @@ from dify_plugin.entities.model.message import UserPromptMessage
 from docx import Document
 from docx.oxml.ns import qn
 
-from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages
+from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages, detect_text_language
 
 
 class FileRevisionTool(Tool):
@@ -378,6 +378,10 @@ class FileRevisionTool(Tool):
                 output_file_name = f"revised_{base}"
 
             doc = Document(temp_path)
+            probe = "\n".join([(p.text or "") for p in doc.paragraphs[:30]])
+            label_lang = detect_text_language(probe)
+            if label_lang != "zh":
+                label_lang = "en"
             anchor_map = self._extract_comment_anchors(doc)
 
             managed_comments: list[dict[str, Any]] = []
@@ -516,7 +520,10 @@ class FileRevisionTool(Tool):
                 revised = str(item.get("revised") or "").strip()
 
                 final_comment = f"[{code}][{severity}] {comment_body}"
-                detail = f"【原文】：{original}\n【修改后】：{revised}"
+                if label_lang == "zh":
+                    detail = f"【原文】：{original}\n【修改后】：{revised}"
+                else:
+                    detail = f"【Original】：{original}\n【After modification】：{revised}"
                 full_comment = f"{final_comment}\n{detail}"
 
                 anchor = revised if (apply_changes and revised) else original

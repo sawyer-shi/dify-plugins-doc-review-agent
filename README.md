@@ -5,12 +5,12 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 ## Version Information
 
 - **Current Version**: v0.0.1
-- **Release Date**: 2026-03-22
+- **Release Date**: 2026-04-05
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
 
 ### Version History
-- **v0.0.1** (2026-03-22): Initial release with document review capabilities
+- **v0.0.1** (2026-04-05): Initial release with local document review capabilities
 
 ## Quick Start
 
