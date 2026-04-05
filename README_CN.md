@@ -16,16 +16,22 @@
 
 1. 在您的 Dify 环境中安装插件
 2. 下载模板Workflow：
-   https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/Document%20Review%20%E2%80%93%20Multi-threaded%20Processing%20Mode.yml
+   <a href="https://github.com/sawyer-shi/awsome-dify-agents/raw/refs/heads/master/src/doc-review-agent/agent_dsl/Document%20Review%20%E2%80%93%20Multi-threaded%20Processing%20Mode.yml">
+     <img src="https://img.shields.io/badge/Download-Workflow%20(Multi-threaded)-blue?style=flat-square" alt="Download Workflow (Multi-threaded)">
+   </a>
    <img width="1763" height="411" alt="sample00" src="https://github.com/user-attachments/assets/9d9c4fa9-3d4f-4b3b-acc6-7568b79096ca" />
-   https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/%E6%96%87%E6%A1%A3%E5%AE%A1%E6%A0%B8--%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F.yml
+   <a href="https://github.com/sawyer-shi/awsome-dify-agents/raw/refs/heads/master/src/doc-review-agent/agent_dsl/%E6%96%87%E6%A1%A3%E5%AE%A1%E6%A0%B8--%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F.yml">
+     <img src="https://img.shields.io/badge/Download-Workflow%20(Standard)-blue?style=flat-square" alt="Download Workflow (Standard)">
+   </a>
    <img width="1802" height="568" alt="sample01" src="https://github.com/user-attachments/assets/dd229702-f736-4ad0-8b27-cd6bce99f113" />
-4. 下载规则模板和样例文件：
-   https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv
+3. 下载规则模板和样例文件：
+   <a href="https://github.com/sawyer-shi/awsome-dify-agents/raw/refs/heads/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv">
+     <img src="https://img.shields.io/badge/Download-Rules%20Template-green?style=flat-square" alt="Download Rules Template">
+   </a>
 
-5. 配置您的 LLM 模型设置。另外注意：防止超时可以修改参数PLUGIN_MAX_EXECUTION_TIMEOUT来增加处理时间，防止超时！！！
+4. 配置您的 LLM 模型设置。另外注意：防止超时可以修改参数PLUGIN_MAX_EXECUTION_TIMEOUT来增加处理时间，防止超时！！！
 
-6. 上传你文档并开始审核流程结果如下：
+5. 上传你文档并开始审核流程结果如下：
    <img width="1816" height="832" alt="sample02" src="https://github.com/user-attachments/assets/1f0fa651-154e-4756-abde-634260b16b31" />
 
 ## 核心特性
