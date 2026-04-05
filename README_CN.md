@@ -15,7 +15,7 @@
 ## 快速开始
 
 1. 在您的 Dify 环境中安装插件
-2. 下载模板Workflwo：
+2. 下载模板Workflow：
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/Document%20Review%20%E2%80%93%20Multi-threaded%20Processing%20Mode.yml
    <img width="1763" height="411" alt="sample00" src="https://github.com/user-attachments/assets/9d9c4fa9-3d4f-4b3b-acc6-7568b79096ca" />
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/%E6%96%87%E6%A1%A3%E5%AE%A1%E6%A0%B8--%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F.yml
