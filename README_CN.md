@@ -23,7 +23,7 @@
 4. 下载规则模板和样例文件：
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv
 
-5. 配置您的 LLM 模型设置
+5. 配置您的 LLM 模型设置。另外注意：防止超时可以修改参数PLUGIN_MAX_EXECUTION_TIMEOUT来增加处理时间，防止超时！！！
 
 6. 上传你文档并开始审核流程结果如下：
    <img width="1816" height="832" alt="sample02" src="https://github.com/user-attachments/assets/1f0fa651-154e-4756-abde-634260b16b31" />
