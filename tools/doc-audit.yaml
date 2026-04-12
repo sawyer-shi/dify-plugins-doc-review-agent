@@ -1,15 +1,15 @@
 identity:
   author: "sawyer-shi"
-  name: doc-slice-audit
+  name: doc-audit
   label:
-    en_US: Doc Audit--Slice (Non-Template)
-    zh_Hans: 文档审核--切片审核(非范本审核)
+    en_US: Doc Audit--Simple (Non-Template)
+    zh_Hans: 文档审核--简单审核(非范本审核)
 description:
   human:
-    en_US: Run document slicing, rule loading, chunk auditing, risk aggregation, annotation, and revision in one tool.
-    zh_Hans: 在一个工具中完成文档切片、规则加载、分片审核、风险聚合、批注与修订。
-  llm: Run document slicing, rule loading, chunk auditing, risk aggregation, annotation, and revision in one tool.
-class_name: DocSliceAuditTool
+    en_US: Run short-document loading, rule loading, and full-text audit, rule loading, risk aggregation, annotation, and revision in one tool.
+    zh_Hans: 在一个工具中完成短文档加载、规则加载、全文审核、风险聚合、批注与修订。
+  llm: Run short-document loading, rule loading, and full-text audit, risk aggregation, annotation, and revision in one tool.
+class_name: DocAuditTool
 parameters:
   - name: model_config
     type: model-selector
@@ -45,87 +45,66 @@ parameters:
       en_US: "Review rules file in xlsx or csv format. Required columns: rule_code, rule_name, rule_level, rule_prompt. If fields do not match, document audit cannot proceed."
       zh_Hans: "xlsx 或 csv 格式的审核规则文件。必须包含字段：rule_code, rule_name, rule_level, rule_prompt。字段不匹配将无法进行文档审核。"
     llm_description: "Review rules file in xlsx or csv format. Required columns: rule_code, rule_name, rule_level, rule_prompt."
-  - name: slice_strategy
+  - name: audit_strategy
     type: select
     required: false
     label:
-      en_US: Slice Strategy
-      zh_Hans: 切片策略
+      en_US: Audit Strategy
+      zh_Hans: 审核策略
     form: llm
     human_description:
       en_US: |-
-        Select how document chunks are split before auditing.
-        - default: paragraph accumulation with max_chunk_chars guard.
-        - by_heading: split on heading-like boundaries.
-        - by_article: split on article/clause-like boundaries.
-        - by_paragraph: one paragraph per chunk.
-        - by_sentence: sentence-level split and packing.
-        - hybrid: split on heading OR article boundaries.
+        Strategy for short full-text audit (single-loop: document vs rules one by one).
+        - balanced: precision/recall balance, recommended default.
+        - strict_precision: report only high-confidence explicit risks.
+        - high_recall: include plausible risks to reduce misses.
+        - severity_first: prioritize high/medium risks.
+        - compliance_explain: provide fuller compliance explanations.
       zh_Hans: |-
-        选择审核前的文档切片方式。
-        - default：按段落累加并受 max_chunk_chars 限制。
-        - by_heading：按标题样式边界切分。
-        - by_article：按条款样式边界切分。
-        - by_paragraph：一段一片。
-        - by_sentence：按句子切分后再聚合。
-        - hybrid：标题或条款任一命中即切分。
-    llm_description: "Select chunk splitting strategy: default/by_heading/by_article/by_paragraph/by_sentence/hybrid."
-    default: ""
+        短文档全文审核策略（单循环：全文与规则逐条比对）。
+        - balanced：平衡准确率和召回率，推荐默认。
+        - strict_precision：仅报告高置信度、证据明确的风险。
+        - high_recall：优先减少漏报，疑似风险也会提示。
+        - severity_first：优先识别高/中风险。
+        - compliance_explain：提供更完整的合规解释。
+    llm_description: "Audit strategy for short full-text single-loop audit."
+    default: "balanced"
     options:
-      - value: ""
+      - value: "balanced"
         label:
-          en_US: Default
-          zh_Hans: 默认
+          en_US: Balanced
+          zh_Hans: 平衡策略
         description:
-          en_US: Paragraph accumulation with max_chunk_chars guard (recommended baseline).
-          zh_Hans: 按段落累加并受 max_chunk_chars 限制（推荐基线策略）。
-      - value: "by_heading"
+          en_US: Balance precision and recall. Suitable for most short-document audits.
+          zh_Hans: 平衡准确率和召回率，适合大多数短文档审核场景。
+      - value: "strict_precision"
         label:
-          en_US: By Heading
-          zh_Hans: 按标题
+          en_US: Strict Precision
+          zh_Hans: 严格准确
         description:
-          en_US: Start a new chunk on heading-like lines, then apply max_chunk_chars.
-          zh_Hans: 遇到标题样式优先断块，再受 max_chunk_chars 限制。
-      - value: "by_article"
+          en_US: Report only high-confidence, explicit risks with strong evidence.
+          zh_Hans: 仅报告高置信度且证据明确的风险，误报更少。
+      - value: "high_recall"
         label:
-          en_US: By Article
-          zh_Hans: 按条款
+          en_US: High Recall
+          zh_Hans: 高召回
         description:
-          en_US: Start a new chunk on article/clause-like lines, then apply max_chunk_chars.
-          zh_Hans: 遇到条款样式优先断块，再受 max_chunk_chars 限制。
-      - value: "by_paragraph"
+          en_US: Include plausible potential risks to avoid misses, then explain uncertainty.
+          zh_Hans: 优先避免漏报，疑似风险也会提示，并给出不确定性说明。
+      - value: "severity_first"
         label:
-          en_US: By Paragraph
-          zh_Hans: 按段落
+          en_US: Severity First
+          zh_Hans: 严重性优先
         description:
-          en_US: One paragraph per chunk; long paragraphs are hard-split by max_chunk_chars.
-          zh_Hans: 一段一片；超长段按 max_chunk_chars 硬切分。
-      - value: "by_sentence"
+          en_US: Prioritize high/medium severity findings and be conservative on low-risk findings.
+          zh_Hans: 优先识别高/中风险，对低风险更保守。
+      - value: "compliance_explain"
         label:
-          en_US: By Sentence
-          zh_Hans: 按句子
+          en_US: Compliance Explain
+          zh_Hans: 合规解释
         description:
-          en_US: Split by sentence first, then pack by max_chunk_chars.
-          zh_Hans: 先按句子切分，再按 max_chunk_chars 聚合。
-      - value: "hybrid"
-        label:
-          en_US: Hybrid
-          zh_Hans: 混合
-        description:
-          en_US: Split on heading OR article boundaries, then apply max_chunk_chars.
-          zh_Hans: 命中标题或条款边界即断块，再受 max_chunk_chars 限制。
-  - name: max_chunk_chars
-    type: number
-    required: false
-    label:
-      en_US: Max Chunk Chars
-      zh_Hans: 切片最大字符数
-    form: llm
-    human_description:
-      en_US: Suggested max characters per chunk.
-      zh_Hans: 每个切片的建议最大字符数。
-    llm_description: Suggested max characters per chunk.
-    default: 1200
+          en_US: Provide fuller compliance-oriented reasoning and actionable remediation.
+          zh_Hans: 提供更完整的合规解释和可执行整改建议。
   - name: extra_hint
     type: string
     required: false
@@ -202,9 +181,9 @@ parameters:
       zh_Hans: 并发线程数
     form: llm
     human_description:
-      en_US: Number of worker threads used during chunk auditing.
-      zh_Hans: 分片审核阶段使用的并发线程数。
-    llm_description: Number of worker threads used during chunk auditing.
+      en_US: Reserved for compatibility, not used in full-text single-loop mode.
+      zh_Hans: 兼容保留字段，在全文单循环模式下不生效。
+    llm_description: Reserved for compatibility, not used in full-text single-loop mode.
     default: 1
   - name: merge_policy
     type: select
@@ -230,7 +209,7 @@ parameters:
         - dedupe_by_rule_code：同规则下全部命中合并。
         - dedupe_by_chunk_rule：按 chunk_id + 规则编号合并。
         - no_dedupe：不去重，保留全部命中。
-    llm_description: Merge policy for dedupe and conflict resolution among risk hits.
+    llm_description: "Merge policy for dedupe and conflict resolution among risk hits."
     default: "dedupe_by_rule_code_quote_location"
     options:
       - value: "dedupe_by_rule_code_quote_location"
@@ -317,7 +296,7 @@ parameters:
         - keep_highest_risk：保留风险等级最高的批注。
         - keep_semantic：按语义质量保留最优单条批注。
         - merge_semantic：将多条批注语义合并为一条综合建议。
-    llm_description: Strategy for handling multiple comments on the same original text.
+    llm_description: "Strategy for handling multiple comments on the same original text."
     default: "keep_highest_risk"
     options:
       - value: "keep_highest_risk"
@@ -357,7 +336,7 @@ parameters:
         是否将最终修订内容回写到原文。
         - no：不改动原文，仅刷新批注。
         - yes：按修订建议改动原文并保留最新批注。
-    llm_description: Whether to apply the latest revision text back to the original document.
+    llm_description: "Whether to apply the latest revision text back to the original document."
     default: "no"
     options:
       - value: "no"
@@ -453,4 +432,4 @@ parameters:
           zh_Hans: 同时输出 reviewed 与 revised_reviewed 两个文档。
 extra:
   python:
-    source: tools/doc_slice_audit.py
+    source: tools/doc_audit.py
