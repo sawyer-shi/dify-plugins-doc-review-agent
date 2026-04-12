@@ -4,7 +4,7 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 
 ## Version Information
 
-- **Current Version**: v0.0.1
+- **Current Version**: v0.0.2
 - **Release Date**: 2026-04-05
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
