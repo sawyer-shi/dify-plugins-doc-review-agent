@@ -45,17 +45,6 @@ parameters:
       en_US: Review rules file in xlsx or csv format.
       zh_Hans: xlsx 或 csv 格式的审核规则文件。
     llm_description: Review rules file in xlsx or csv format.
-  - name: parse_hint
-    type: string
-    required: false
-    label:
-      en_US: Parse Hint
-      zh_Hans: 解析提示
-    form: llm
-    human_description:
-      en_US: Optional legacy parse hint for slicing.
-      zh_Hans: 可选的旧版切片解析提示。
-    llm_description: Optional legacy parse hint for slicing.
   - name: slice_strategy
     type: select
     required: false
@@ -113,9 +102,9 @@ parameters:
       zh_Hans: 额外提示
     form: llm
     human_description:
-      en_US: Optional audit hint such as party role or review context.
-      zh_Hans: 可选的审核提示，例如主体角色或审核上下文。
-    llm_description: Optional audit hint such as party role or review context.
+      en_US: "Optional audit hint, for example: I am Party A / I am Party B."
+      zh_Hans: 可选审核提示，例如：我是甲方；我是乙方。
+    llm_description: "Optional audit hint, for example: I am Party A / I am Party B."
   - name: output_language
     type: select
     required: false
@@ -296,6 +285,48 @@ parameters:
       en_US: Final revised output file name without extension.
       zh_Hans: 最终修订文件名，不含扩展名。
     llm_description: Final revised output file name without extension.
+  - name: output_json_mode
+    type: select
+    required: false
+    label:
+      en_US: JSON Output Mode
+      zh_Hans: JSON输出模式
+    form: llm
+    human_description:
+      en_US: summary_only outputs only final summary; detailed outputs full intermediate payload.
+      zh_Hans: summary_only 仅输出最终 summary；detailed 输出完整中间信息。
+    llm_description: "Control final JSON output mode: summary_only or detailed."
+    default: "summary_only"
+    options:
+      - value: "summary_only"
+        label:
+          en_US: Summary Only
+          zh_Hans: 仅摘要
+      - value: "detailed"
+        label:
+          en_US: Detailed
+          zh_Hans: 详细
+  - name: output_file_mode
+    type: select
+    required: false
+    label:
+      en_US: Output File Mode
+      zh_Hans: 输出文件模式
+    form: llm
+    human_description:
+      en_US: revised_only outputs only revised_reviewed file; both outputs reviewed and revised_reviewed files.
+      zh_Hans: revised_only 仅输出 revised_reviewed；both 同时输出 reviewed 与 revised_reviewed。
+    llm_description: "Control file outputs: revised_only or both."
+    default: "revised_only"
+    options:
+      - value: "revised_only"
+        label:
+          en_US: Revised Only
+          zh_Hans: 仅修订稿
+      - value: "both"
+        label:
+          en_US: Both Files
+          zh_Hans: 两个文件
 extra:
   python:
     source: tools/doc_slice_audit.py

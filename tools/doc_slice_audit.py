@@ -153,6 +153,13 @@ class DocSliceAuditTool(Tool):
         output_file_name = str(tool_parameters.get("output_file_name") or "").strip()
         merge_strategy = tool_parameters.get("merge_strategy") or "keep_highest_risk"
         apply_to_original = tool_parameters.get("apply_to_original") or "no"
+        output_json_mode = str(tool_parameters.get("output_json_mode") or "summary_only").strip().lower()
+        output_file_mode = str(tool_parameters.get("output_file_mode") or "revised_only").strip().lower()
+
+        if output_json_mode not in {"summary_only", "detailed"}:
+            output_json_mode = "summary_only"
+        if output_file_mode not in {"revised_only", "both"}:
+            output_file_mode = "revised_only"
 
         annotate_output_name = f"annotated_{output_file_name}" if output_file_name else None
         revise_output_name = output_file_name or None
@@ -188,7 +195,7 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             slices_payload = parser_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
             step_index, step_name = steps[1]
             yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
@@ -199,10 +206,10 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             rules_payload = loader_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
             step_index, step_name = steps[2]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}(处理时间会比较长，请耐心等待)")
             logger.info("[%s/6] %s", step_index, step_name)
             audit_result = self._run_subtool(
                 self._get_subtool_class("chunk_auditor"),
@@ -220,7 +227,7 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             audit_payload = audit_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
             step_index, step_name = steps[3]
             yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
@@ -238,10 +245,10 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             aggregate_payload = aggregate_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
             step_index, step_name = steps[4]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}(处理时间会比较长，请耐心等待)")
             logger.info("[%s/6] %s", step_index, step_name)
             annotate_result = self._run_subtool(
                 self._get_subtool_class("doc_annotator"),
@@ -263,7 +270,7 @@ class DocSliceAuditTool(Tool):
                 for message in self._emit_error(step_index, step_name, "标注文档未生成"):
                     yield message
                 return
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
             step_index, step_name = steps[5]
             yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
@@ -289,9 +296,31 @@ class DocSliceAuditTool(Tool):
                 for message in self._emit_error(step_index, step_name, "修订文档未生成"):
                     yield message
                 return
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成")
+            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
 
-            summary_payload = {
+            summary = {
+                "annotation_count": int(annotate_payload.get("annotation_count", 0)) if isinstance(annotate_payload, dict) else 0,
+                "chunk_count": len(slices_payload.get("chunks", [])) if isinstance(slices_payload, dict) else 0,
+                "final_comment_count": int(revision_payload.get("final_comment_count", 0)) if isinstance(revision_payload, dict) else 0,
+                "modified_count": int(revision_payload.get("modified_count", 0)) if isinstance(revision_payload, dict) else 0,
+                "rule_count": (
+                    int(rules_payload.get("rule_count", 0))
+                    if isinstance(rules_payload, dict) and str(rules_payload.get("rule_count", "")).isdigit()
+                    else len(rules_payload.get("rules", []))
+                    if isinstance(rules_payload, dict)
+                    else 0
+                ),
+                "total_hits": (
+                    int(aggregate_payload.get("summary", {}).get("output_hits", 0))
+                    if isinstance(aggregate_payload, dict) and isinstance(aggregate_payload.get("summary"), dict)
+                    else int(audit_payload.get("total_hits", 0))
+                    if isinstance(audit_payload, dict)
+                    else 0
+                ),
+                "total_pairs": int(audit_payload.get("total_pairs", 0)) if isinstance(audit_payload, dict) else 0,
+            }
+
+            detailed_payload = {
                 "status": "ok",
                 "slices": slices_payload,
                 "rules": rules_payload,
@@ -299,33 +328,17 @@ class DocSliceAuditTool(Tool):
                 "aggregated_risks": aggregate_payload,
                 "annotated_file": annotate_payload,
                 "revised_file": revision_payload,
-                "summary": {
-                    "chunk_count": len(slices_payload.get("chunks", [])) if isinstance(slices_payload, dict) else 0,
-                    "rule_count": (
-                        int(rules_payload.get("rule_count", 0))
-                        if isinstance(rules_payload, dict) and str(rules_payload.get("rule_count", "")).isdigit()
-                        else len(rules_payload.get("rules", []))
-                        if isinstance(rules_payload, dict)
-                        else 0
-                    ),
-                    "total_pairs": int(audit_payload.get("total_pairs", 0)) if isinstance(audit_payload, dict) else 0,
-                    "total_hits": (
-                        int(aggregate_payload.get("summary", {}).get("output_hits", 0))
-                        if isinstance(aggregate_payload, dict) and isinstance(aggregate_payload.get("summary"), dict)
-                        else int(audit_payload.get("total_hits", 0))
-                        if isinstance(audit_payload, dict)
-                        else 0
-                    ),
-                    "annotation_count": int(annotate_payload.get("annotation_count", 0)) if isinstance(annotate_payload, dict) else 0,
-                    "final_comment_count": int(revision_payload.get("final_comment_count", 0)) if isinstance(revision_payload, dict) else 0,
-                    "modified_count": int(revision_payload.get("modified_count", 0)) if isinstance(revision_payload, dict) else 0,
-                },
+                "summary": summary,
             }
             yield self.create_text_message("🎯 文档切片审核完成！")
-            yield self.create_json_message(summary_payload)
+            if output_json_mode == "detailed":
+                yield self.create_json_message(detailed_payload)
+            else:
+                yield self.create_json_message({"summary": summary})
 
-            for blob_entry in annotate_blobs:
-                yield self.create_blob_message(blob=blob_entry.get("blob", b""), meta=blob_entry.get("meta") or {"mime_type": WORD_MIME_TYPE})
+            if output_file_mode == "both":
+                for blob_entry in annotate_blobs:
+                    yield self.create_blob_message(blob=blob_entry.get("blob", b""), meta=blob_entry.get("meta") or {"mime_type": WORD_MIME_TYPE})
             for blob_entry in revision_blobs:
                 yield self.create_blob_message(blob=blob_entry.get("blob", b""), meta=blob_entry.get("meta") or {"mime_type": WORD_MIME_TYPE})
             logger.info("Doc slice audit task completed")
