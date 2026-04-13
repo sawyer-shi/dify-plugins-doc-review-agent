@@ -10,6 +10,10 @@ from tools.utils import detect_text_language, dual_messages, invoke_llm, safe_js
 
 
 class TemplateDocAuditorTool(Tool):
+    @staticmethod
+    def _normalize_quote(quote: str) -> str:
+        return " ".join(str(quote or "").split())
+
     def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
         llm_model = tool_parameters.get("model_config")
         template_text = str(tool_parameters.get("template_text") or "")
@@ -88,15 +92,18 @@ Requirements:
         for idx, one in enumerate(items, start=1):
             if not isinstance(one, dict):
                 continue
-            quote = str(one.get("quote", "")).strip()
+            quote = self._normalize_quote(str(one.get("quote", "")).strip())
             if quote and doc_text and quote not in doc_text:
-                continue
-            if "\n" in quote or "\r" in quote:
-                continue
+                quote = ""
 
             severity = str(one.get("severity", "")).strip().lower()
             if severity not in ["high", "medium", "low"]:
                 severity = "medium"
+
+            reason = str(one.get("reason", "")).strip()
+            suggestion = str(one.get("suggestion", "")).strip()
+            if not reason and not suggestion:
+                continue
 
             audit_results.append(
                 {
@@ -109,8 +116,8 @@ Requirements:
                     "rule_level": "medium",
                     "severity": severity,
                     "quote": quote,
-                    "reason": str(one.get("reason", "")).strip(),
-                    "suggestion": str(one.get("suggestion", "")).strip(),
+                    "reason": reason,
+                    "suggestion": suggestion,
                 }
             )
 
