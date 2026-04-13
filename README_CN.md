@@ -1,47 +1,48 @@
 # 文档审核Agent
 
-一个强大的 Dify 插件，使用 AI 驱动的智能审核功能，支持标书、公文、合同、资料等各种类型的文档审核。支持智能文档解析、基于规则的审核、风险聚合和带批注的文档生成，具有专业级质量和灵活的配置选项。
+一个强大的 Dify 插件，使用 AI 驱动的智能审核功能，支持标书、公文、合同、资料等各种类型的文档审核(支持范本和非范本文档审核)。支持智能文档解析、基于规则的审核、风险聚合和带批注的文档生成，具有专业级质量和灵活的配置选项。
 
 ## 版本信息
 
 - **当前版本**: v0.0.2
-- **发布日期**: 2026-04-05
+- **发布日期**: 2026-04-13
 - **兼容性**: Dify 插件框架
 - **Python 版本**: 3.12
 
 ### 版本历史
+- **v0.0.2** (2026-04-13):
+  - 新增一体化**切片审核工具** `doc-slice-audit`（切片 -> 规则加载 -> 审核 -> 聚合 -> 批注 -> 修订）
+  - 新增一体化**简单/全文审核工具** `doc-audit`，适用于短文档单循环审核
+  - 新增**范本切片审核工具** `doc-slice-audit-template`，`template_file` 必填、`rules_file` 可选
+  - 新增**范本全文审核工具** `doc-audit-template`，`template_file` 必填、`rules_file` 可选
+  - 新增范本对比子能力：`template_chunk_auditor.py` 和 `template_doc_auditor.py`
+  - 新增范本风险编号规范 `template-0001` 格式，并统一聚合/标注字段结构
+  - 优化 `doc_annotator` 无风险场景处理（不再报错，直接返回 `annotation_count=0` 的已审核文档）
+  - 按一体化顶层工具重构 Provider 工具暴露与 YAML 配置
 - **v0.0.1** (2026-04-05): 初始版本，包含本地文档审核功能
 
 ## 快速开始
 
 1. 在您的 Dify 环境中安装插件
-2. 下载模板Workflow：
-   
-   English：https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/Document%20Review%20%E2%80%93%20Multi-threaded%20Processing%20Mode.yml
 
-   <img width="1763" height="411" alt="sample00" src="https://github.com/user-attachments/assets/9d9c4fa9-3d4f-4b3b-acc6-7568b79096ca" />
-   
-   Chinese：https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/%E6%96%87%E6%A1%A3%E5%AE%A1%E6%A0%B8--%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F.yml
-
-   <img width="1802" height="568" alt="sample01" src="https://github.com/user-attachments/assets/dd229702-f736-4ad0-8b27-cd6bce99f113" />
-3. 下载规则模板和样例文件：
+2. 下载规则模板和样例文件：
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv
 
-4. 配置您的 LLM 模型设置。另外注意：防止超时可以修改参数PLUGIN_MAX_EXECUTION_TIMEOUT来增加处理时间，防止超时！！！
+3. 配置您的 LLM 模型设置。另外注意：防止超时可以修改参数PLUGIN_MAX_EXECUTION_TIMEOUT来增加处理时间，防止超时！！！
 
-5. 上传你文档并开始审核流程结果如下：
+4. 上传你文档并开始审核流程结果如下：
    <img width="1816" height="832" alt="sample02" src="https://github.com/user-attachments/assets/1f0fa651-154e-4756-abde-634260b16b31" />
 
 ## 核心特性
 
-- **智能文档解析**: 使用 LLM 指导将文档解析为可管理的切片
-- **基于规则的审核**: 加载审核规则并根据规则审核文档切片
-- **风险聚合**: 汇总和去重多个切片的审核风险
-- **文档批注**: 生成带 AI 辅助批注的文档
-- **灵活配置**: 支持自定义审核规则和审核级别
-- **多种文档类型**: 支持标书、公文、合同和资料
-- **批量处理**: 通过切片高效处理大型文档
-- **LLM 集成**: 利用配置的 LLM 模型进行智能分析
+- **四类一体化审核工具**: 覆盖切片/全文、非范本/范本四种主流程
+- **范本基线审核能力**: 以范本文档为基线对比，范本风险编号统一为 `template-0001` 风格
+- **规则+范本混合审核**: `rules_file` 可选叠加，规则结果与范本结果统一聚合
+- **结构化风险处理链路**: 审核 -> 聚合 -> 批注 -> 修订，字段结构一致便于后续打标
+- **高质量文档输出**: 支持已审核（批注）与修订稿输出，并支持 JSON 摘要/明细模式
+- **灵活参数控制**: 支持切片策略、审核策略、合并策略、输出语言与输出模式
+- **无风险场景稳定返回**: 无命中时不报错，返回 `annotation_count=0` 的有效已审核文档
+- **多语言输出支持**: 支持中/英/日/韩/西/法/德/葡/俄/阿
 
   <img width="409" height="684" alt="EN" src="https://github.com/user-attachments/assets/097c6095-2c9f-45be-ba57-eba41b396d84" /><img width="411" height="644" alt="CN" src="https://github.com/user-attachments/assets/e7db9fb0-6780-4c3e-b39d-98a40dee74a2" />
 
@@ -49,84 +50,65 @@
 
 ## 核心功能
 
-### 文档解析
+### 1) 文档审核--切片审核（非范本）`doc-slice-audit`
+面向较长文档的非范本切片审核。
+- **必填**：`model_config`、`upload_file`、`rules_file`
+- **执行流程（6步）**：
+  1. 文档切片
+  2. 规则加载
+  3. 切片审核
+  4. 风险聚合
+  5. 文档批注
+  6. 文件修订
+- **适用场景**：合同/标书等需要分片审阅的文档
 
-#### 文档解析切片 (doc_slice_parser)
-使用 LLM 指导将文档解析为审核切片。
-- **功能特性**:
-  - 基于内容结构的智能文档切片
-  - 可配置的最大切片大小（默认：1200 字符）
-  - 支持解析提示词以指导切片策略
-  - LLM 辅助的切片边界检测
-  - 针对 docx 格式文档优化
+### 2) 文档审核--简单审核（非范本）`doc-audit`
+面向短文档的非范本全文审核。
+- **必填**：`model_config`、`upload_file`、`rules_file`
+- **执行流程（6步）**：
+  1. 加载审核文档
+  2. 规则加载
+  3. 全文规则审核
+  4. 风险聚合
+  5. 文档批注
+  6. 文件修订
+- **适用场景**：篇幅较短、需要全文上下文判断的文档
 
-### 规则管理
+### 3) 文档审核--切片审核（范本）`doc-slice-audit-template`
+面向较长文档的范本切片审核。
+- **必填**：`model_config`、`upload_file`、`template_file`
+- **可选**：`rules_file`（提供后执行规则审核+范本审核的混合流程）
+- **执行流程（8步）**：
+  1. 审核文档切片
+  2. 范本文档切片
+  3. 规则加载（可选输入；进度步骤始终保留）
+  4. 规则分片审核（提供 `rules_file` 时执行，否则标记为跳过）
+  5. 范本分片对比审核
+  6. 风险聚合
+  7. 文档标注
+  8. 文件修订
+- **输出语义**：范本风险编号统一为 `template-0001`、`template-0002`，风险等级由模型判定
 
-#### 审核规则加载 (rule_loader)
-根据文档摘要和审核要求加载审核规则。
-- **功能特性**:
-  - 基于文档类型的动态规则选择
-  - 支持不同的审核级别（严格/宽松）
-  - 针对特定场景的可自定义规则提示
-  - 基于文档摘要的规则匹配
-  - 灵活的规则配置
+### 4) 文档审核--简单审核（范本）`doc-audit-template`
+面向短文档的范本全文审核。
+- **必填**：`model_config`、`upload_file`、`template_file`
+- **可选**：`rules_file`（提供后执行规则审核+范本审核的混合流程）
+- **执行流程（8步）**：
+  1. 加载审核文档
+  2. 加载范本文档
+  3. 规则加载（可选输入；进度步骤始终保留）
+  4. 规则审核（提供 `rules_file` 时执行，否则标记为跳过）
+  5. 范本对比审核
+  6. 风险聚合
+  7. 文档标注
+  8. 文件修订
+- **适用场景**：短文档的快速范本合规检查
 
-### 文档审核
-
-#### 文档切片审核 (chunk_auditor)
-使用加载的规则审核文档切片，采用双循环处理架构。
-- **功能特性**:
-  - 基于规则的风险检测，采用双循环架构
-  - 详细的风险识别和分类
-  - 基于引用的风险参考
-  - 额外提示支持以增强审核
-  - 多语言输出支持（中文、英文、日文、韩文、西班牙文、法文、德文、葡萄牙文、俄文、阿拉伯文）
-  - 全面的切片级别分析
-  - 内置切片和规则循环，高效处理
-
-#### 文档切片审核--单循环 (chunk_auditor_slice)
-对单个切片对象与规则集执行循环审核（仅规则循环，需要添加外循环）。
-- **功能特性**:
-  - 单个切片对象处理
-  - 仅规则循环架构（切片处理一次，规则内部循环）
-  - 需要外循环处理多个切片
-  - 多语言输出支持（中文、英文、日文、韩文、西班牙文、法文、德文、葡萄牙文、俄文、阿拉伯文）
-  - 自动语言检测能力
-  - 优化批量处理工作流程
-
-### 风险管理
-
-#### 风险聚合器 (risk_aggregator)
-汇总和去重多个切片的审核风险。
-- **功能特性**:
-  - 智能风险去重
-  - 多种合并策略（按引用去重等）
-  - 风险分类和优先级排序
-  - 全面的风险摘要生成
-  - 冲突解决策略
-
-### 文档输出
-
-#### 文档批注生成 (doc_annotator)
-生成带 AI 辅助批注的文档输出。
-- **功能特性**:
-  - 批注风格的批注生成
-  - 原始文档保留
-  - 基于风险的批注插入
-  - 可配置的输出文件命名
-  - 支持 docx 格式输出
-
-#### 文件修正 (file_revision)
-处理 doc_annotator 生成的带批注文档，对同段原文的重叠风险批注进行合并，并可按批注修改原文且保留最新批注。
-- **功能特性**:
-  - 针对同一段原文多风险批注提供三种策略：
-    - 按风险等级保留批注（同级用语义判定）
-    - 按语义理解保留批注
-    - 按语义理解综合批注（规则编号合并保留）
-  - 可选是否按合并后/最新批注修改原文
-  - 处理后始终保留最新批注
-  - 兼容 doc_annotator 生成的 `[rule_code][severity]` 批注格式
-  - 支持 docx 格式输出
+### 通用输出与控制项
+- **JSON 输出**：`summary_only` 或 `detailed`
+- **文件输出**：仅修订稿，或“已审核稿 + 修订稿”
+- **修订策略**：支持 `keep_highest_risk` / `keep_semantic` / `merge_semantic`
+- **无风险返回**：无命中时返回有效已审核文档，`annotation_count=0`
 
 ## 技术优势
 
@@ -162,57 +144,33 @@
 
 ## 使用方法
 
-### 文档审核工作流程
+### 如何选择工具
 
-#### 步骤 1: 文档解析
-使用**文档解析切片**工具解析您的文档：
-- **参数**:
-  - `upload_file`: 要解析的文档文件（仅 docx，必需）
-  - `model_config`: 用于解析的 LLM 模型（必需）
-  - `parse_hint`: 可选的解析策略提示
-  - `max_chunk_chars`: 每个切片的建议最大字符数（默认：1200）
+#### A) 非范本切片审核
+使用 `doc-slice-audit`（有规则文件、需要切片级审核）。
+- 必填：`model_config`、`upload_file`、`rules_file`
+- 推荐可选：`slice_strategy`、`max_chunk_chars`、`merge_policy`、`output_language`
 
-#### 步骤 2: 加载审核规则
-使用**审核规则加载**工具加载适当的审核规则：
-- **参数**:
-  - `model_config`: 用于规则加载的 LLM 模型（必需）
-  - `doc_summary`: 文档的摘要或预览
-  - `audit_level`: 审核严格程度（strict/lenient，默认：strict）
-  - `rule_hint`: 可选的规则选择提示
+#### B) 非范本全文审核
+使用 `doc-audit`（有规则文件、文档较短）。
+- 必填：`model_config`、`upload_file`、`rules_file`
+- 推荐可选：`audit_strategy`、`merge_policy`、`output_language`
 
-#### 步骤 3: 审核文档切片
-使用**文档切片审核**工具审核每个文档切片：
-- **参数**:
-  - `model_config`: 用于审核的 LLM 模型（必需）
-  - `chunk_text`: 要审核的文本切片（必需）
-  - `chunk_id`: 切片标识符（必需）
-  - `rules`: 来自规则加载器的规则文本
-  - `extra_hint`: 可选的额外语境提示
+#### C) 范本切片审核
+使用 `doc-slice-audit-template`（按范本逐段对比）。
+- 必填：`model_config`、`upload_file`、`template_file`
+- 可选：`rules_file`（启用规则+范本混合审核）
+- 说明：范本风险会生成 `template-0001` 风格编号
 
-#### 步骤 4: 汇总风险
-使用**风险聚合器**工具合并审核结果：
-- **参数**:
-  - `model_config`: 用于聚合的 LLM 模型（必需）
-  - `raw_results`: 来自多个切片的原始审核结果（必需）
-  - `merge_policy`: 冲突解决策略（默认：dedupe_by_quote）
+#### D) 范本全文审核
+使用 `doc-audit-template`（按范本做全文对比）。
+- 必填：`model_config`、`upload_file`、`template_file`
+- 可选：`rules_file`（启用规则+范本混合审核）
 
-#### 步骤 5: 生成带批注的文档
-使用**文档批注生成**工具创建最终输出：
-- **参数**:
-  - `model_config`: 用于批注的 LLM 模型（必需）
-  - `upload_file`: 原始文档文件（仅 docx，必需）
-  - `audit_report`: 汇总后的审核报告 JSON（必需）
-  - `annotation_style`: 批注风格（默认：comment）
-  - `output_file_name`: 不含扩展名的输出文件名
-
-#### 步骤 6: 合并/修正文档
-使用**文件修正**工具处理批注文档，合并重叠批注并可选修改原文：
-- **参数**:
-  - `model_config`: 用于语义合并/选择的 LLM 模型（必需）
-  - `upload_file`: 文档批注生成工具输出的 docx（必需）
-  - `merge_strategy`: `keep_highest_risk` / `keep_semantic` / `merge_semantic`（必需）
-  - `apply_to_original`: `no`/`yes`（必填，默认：`no`）
-  - `output_file_name`: 不含扩展名的输出文件名
+### 典型输出
+- JSON 摘要（或明细 JSON）
+- 已审核文档 `.docx`（含批注）
+- 修订文档 `.docx`（按策略合并/回写）
 
 ## 支持的文档格式
 

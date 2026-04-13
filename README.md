@@ -1,130 +1,112 @@
 # Document Review Agent
 
-A powerful Dify plugin providing comprehensive AI-powered document review capabilities for various types of documents including tender documents, official documents, contracts, and materials. Supports intelligent document parsing, rule-based auditing, risk aggregation, and annotated document generation with professional-grade quality and flexible configuration options.
+A powerful Dify plugin providing comprehensive AI-powered document review capabilities for various types of documents including tender documents, official documents, contracts, and materials, with support for non-compliant document detection. Supports intelligent document parsing, rule-based auditing, risk aggregation, and annotated document generation with professional-grade quality and flexible configuration options.
 
 ## Version Information
 
 - **Current Version**: v0.0.2
-- **Release Date**: 2026-04-05
+- **Release Date**: 2026-04-13
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
 
 ### Version History
+- **v0.0.2** (2026-04-13):
+  - Added integrated **slice audit tool** `doc-slice-audit` (parse -> load rules -> audit -> aggregate -> annotate -> revise)
+  - Added integrated **simple/full-text audit tool** `doc-audit` for short document single-loop auditing
+  - Added **template slice audit tool** `doc-slice-audit-template` with required `template_file` and optional `rules_file`
+  - Added **template full-text audit tool** `doc-audit-template` with required `template_file` and optional `rules_file`
+  - Added template comparators: `template_chunk_auditor.py` and `template_doc_auditor.py`
+  - Added template risk code normalization to `template-0001` style and aligned output fields for aggregation/annotation
+  - Improved no-risk handling in `doc_annotator` (returns original reviewed file with `annotation_count=0` instead of failing)
+  - Reorganized provider tool exposure and YAML definitions around integrated top-level tools
 - **v0.0.1** (2026-04-05): Initial release with local document review capabilities
 
 ## Quick Start
 
 1. Install plugin in your Dify environment
-2. Download Template Workflow:
-   
-   English：https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/Document%20Review%20%E2%80%93%20Multi-threaded%20Processing%20Mode.yml
 
-   <img width="1763" height="411" alt="sample00" src="https://github.com/user-attachments/assets/9d9c4fa9-3d4f-4b3b-acc6-7568b79096ca" />
-   
-   Chinese：https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_dsl/%E6%96%87%E6%A1%A3%E5%AE%A1%E6%A0%B8--%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F.yml
-
-   <img width="1802" height="568" alt="sample01" src="https://github.com/user-attachments/assets/dd229702-f736-4ad0-8b27-cd6bce99f113" />
-3. Download Rules Template and Sample Files:
+2. Download Rules Template and Sample Files:
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv
 
-4. Configure your LLM model settings. Also note: To prevent timeout, you can modify the parameter PLUGIN_MAX_EXECUTION_TIMEOUT to increase processing time!!!
+. Configure your LLM model settings. Also note: To prevent timeout, you can modify the parameter PLUGIN_MAX_EXECUTION_TIMEOUT to increase processing time!!!
 
-5. Upload your document and start the review process. Results are as follows:
+4. Upload your document and start the review process. Results are as follows:
    <img width="1816" height="832" alt="sample02" src="https://github.com/user-attachments/assets/1f0fa651-154e-4756-abde-634260b16b31" />
 
 ## Key Features
 
-- **Intelligent Document Parsing**: Parse and slice documents into manageable chunks using LLM guidance
-- **Rule-Based Auditing**: Load review rules and audit document chunks against them
-- **Risk Aggregation**: Aggregate and deduplicate audit risks from multiple chunks
-- **Document Annotation**: Generate annotated documents with AI-assisted comments
-- **Flexible Configuration**: Support for custom review rules and audit levels
-- **Multiple Document Types**: Supports tender documents, official documents, contracts, and materials
-- **Batch Processing**: Efficient processing of large documents through chunking
-- **LLM Integration**: Leverages configured LLM models for intelligent analysis
+- **Four Integrated Audit Tools**: Slice/non-template, full-text/non-template, slice/template, and full-text/template workflows
+- **Template Baseline Review**: Template-based findings use normalized risk codes like `template-0001` for consistent downstream tagging
+- **Hybrid Rule + Template Aggregation**: Optional `rules_file` can run together with template audit and merge into one unified risk payload
+- **Structured Risk Pipeline**: Audit -> aggregation -> annotation -> revision with consistent data schema across workflows
+- **High-Quality Output Files**: Reviewed (annotated) and revised `.docx` outputs with configurable JSON/file output modes
+- **Flexible Control Knobs**: Slice strategy, audit strategy, merge policy, merge strategy, language, and output settings
+- **No-Risk Safe Handling**: When no risks are found, the workflow returns a valid reviewed file instead of failing
+- **Multi-Language Reasoning**: Supports zh/en/ja/ko/es/fr/de/pt/ru/ar outputs
 
   <img width="409" height="684" alt="EN" src="https://github.com/user-attachments/assets/097c6095-2c9f-45be-ba57-eba41b396d84" /><img width="411" height="644" alt="CN" src="https://github.com/user-attachments/assets/e7db9fb0-6780-4c3e-b39d-98a40dee74a2" />
 
 ## Core Features
 
-### Document Parsing
+### 1) Doc Slice Audit (`doc-slice-audit`)
+Integrated non-template slice auditing for larger documents.
+- **Required**: `model_config`, `upload_file`, `rules_file`
+- **What it does (6 steps)**:
+  1. Document slicing
+  2. Rule loading
+  3. Chunk auditing
+  4. Risk aggregation
+  5. Document annotation
+  6. File revision
+- **Best for**: contracts/tenders where chunk-level analysis is preferred
 
-#### Doc Slice Parser (doc_slice_parser)
-Parse and slice a document into review chunks using LLM guidance.
-- **Features**:
-  - Intelligent document slicing based on content structure
-  - Configurable maximum chunk size (default: 1200 characters)
-  - Support for parse hints to guide slicing strategy
-  - LLM-assisted chunk boundary detection
-  - Optimized for docx format documents
+### 2) Doc Audit (`doc-audit`)
+Integrated non-template full-text auditing for short documents.
+- **Required**: `model_config`, `upload_file`, `rules_file`
+- **What it does (6 steps)**:
+  1. Load review document
+  2. Rule loading
+  3. Full-text rule audit
+  4. Risk aggregation
+  5. Document annotation
+  6. File revision
+- **Best for**: shorter documents where whole-text context is important
 
-### Rule Management
+### 3) Doc Slice Audit Template (`doc-slice-audit-template`)
+Integrated template-based slice auditing.
+- **Required**: `model_config`, `upload_file`, `template_file`
+- **Optional**: `rules_file` (runs rule audit + template audit together when provided)
+- **What it does (8-step pipeline)**:
+  1. Slice review document
+  2. Slice template document
+  3. Rule loading (optional input; step kept in progress output)
+  4. Rule-based chunk audit (runs when `rules_file` is provided, otherwise marked as skipped)
+  5. Template chunk comparison audit
+  6. Risk aggregation
+  7. Document annotation
+  8. File revision
+- **Output semantics**: template findings use normalized codes (`template-0001`, `template-0002`, ...), severity from LLM (`high|medium|low`)
 
-#### Rule Loader (rule_loader)
-Load review rules based on document summary and audit requirements.
-- **Features**:
-  - Dynamic rule selection based on document type
-  - Support for different audit levels (strict/lenient)
-  - Customizable rule hints for specific scenarios
-  - Document summary-based rule matching
-  - Flexible rule configuration
+### 4) Doc Audit Template (`doc-audit-template`)
+Integrated template-based full-text auditing.
+- **Required**: `model_config`, `upload_file`, `template_file`
+- **Optional**: `rules_file` (runs rule audit + template audit together when provided)
+- **What it does (8-step pipeline)**:
+  1. Load review document
+  2. Load template document
+  3. Rule loading (optional input; step kept in progress output)
+  4. Rule-based full-text audit (runs when `rules_file` is provided, otherwise marked as skipped)
+  5. Full-text template comparison audit
+  6. Risk aggregation
+  7. Document annotation
+  8. File revision
+- **Best for**: short-form baseline checks against a model template
 
-### Document Auditing
-
-#### Chunk Auditor (chunk_auditor)
-Audit a document chunk with loaded rules using dual-loop processing.
-- **Features**:
-  - Rule-based risk detection with dual-loop architecture
-  - Detailed risk identification and categorization
-  - Quote-based risk referencing
-  - Extra hint support for enhanced auditing
-  - Multi-language output support (Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Arabic)
-  - Comprehensive chunk-level analysis
-  - Built-in chunk and rule loops for efficient processing
-
-#### Chunk Auditor Slice (chunk_auditor_slice)
-Audit a single chunk object against all rules using rule-loop only (requires outer loop).
-- **Features**:
-  - Single chunk object processing
-  - Rule-loop only architecture (chunk processed once, rules loop internally)
-  - Requires outer loop for multiple chunks
-  - Multi-language output support (Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Arabic)
-  - Auto language detection capability
-  - Optimized for batch processing workflows
-
-### Risk Management
-
-#### Risk Aggregator (risk_aggregator)
-Aggregate and deduplicate audit risks from multiple chunks.
-- **Features**:
-  - Intelligent risk deduplication
-  - Multiple merge policies (dedupe_by_quote, etc.)
-  - Risk categorization and prioritization
-  - Comprehensive risk summary generation
-  - Conflict resolution strategies
-
-### Document Output
-
-#### Doc Annotator (doc_annotator)
-Generate annotated document output with LLM-assisted notes.
-- **Features**:
-  - Comment-style annotation generation
-  - Original document preservation
-  - Risk-based comment insertion
-  - Configurable output file naming
-  - Support for docx format output
-
-#### File Revision (file_revision)
-Process the annotated docx generated by doc_annotator, merge overlapping comments, and optionally revise original text while keeping latest comments.
-- **Features**:
-  - Three merge strategies for multi-risk comments on the same original text:
-    - Keep highest risk (tie broken by semantic selection)
-    - Keep semantic best
-    - Semantic merge with combined rule codes
-  - Optional source-text revision based on merged/latest comments
-  - Latest comments are always retained after processing
-  - Compatible with doc_annotator comment format `[rule_code][severity]`
-  - Support for docx format output
+### Shared Output and Controls
+- **JSON output**: `summary_only` or `detailed`
+- **File output**: revised only, or reviewed + revised
+- **Revision behavior**: choose merge strategy and whether to apply revisions back to source text
+- **No-risk behavior**: returns a valid reviewed file with `annotation_count=0`
 
 ## Technical Advantages
 
@@ -160,57 +142,33 @@ Process the annotated docx generated by doc_annotator, merge overlapping comment
 
 ## Usage
 
-### Document Review Workflow
+### Choose the Right Tool
 
-#### Step 1: Document Parsing
-Use **Doc Slice Parser** to parse your document:
-- **Parameters**:
-  - `upload_file`: The document file to parse (docx only, required)
-  - `model_config`: The LLM model to use for parsing (required)
-  - `parse_hint`: Optional hint for parsing strategy
-  - `max_chunk_chars`: Suggested max characters per chunk (default: 1200)
+#### A) Non-template Slice Audit
+Use `doc-slice-audit` when you have a rule file and need chunk-level review.
+- Required: `model_config`, `upload_file`, `rules_file`
+- Recommended options: `slice_strategy`, `max_chunk_chars`, `merge_policy`, `output_language`
 
-#### Step 2: Load Review Rules
-Use **Rule Loader** to load appropriate review rules:
-- **Parameters**:
-  - `model_config`: The LLM model to use for rule loading (required)
-  - `doc_summary`: Summary or preview of the document
-  - `audit_level`: Audit strictness (strict/lenient, default: strict)
-  - `rule_hint`: Optional hint for rule selection
+#### B) Non-template Full-Text Audit
+Use `doc-audit` when you have a rule file and the document is short enough for full-text auditing.
+- Required: `model_config`, `upload_file`, `rules_file`
+- Recommended options: `audit_strategy`, `merge_policy`, `output_language`
 
-#### Step 3: Audit Document Chunks
-Use **Chunk Auditor** to audit each document chunk:
-- **Parameters**:
-  - `model_config`: The LLM model to use for auditing (required)
-  - `chunk_text`: The text chunk to review (required)
-  - `chunk_id`: Chunk identifier (required)
-  - `rules`: Rules text from Rule Loader
-  - `extra_hint`: Optional extra hint
+#### C) Template Slice Audit
+Use `doc-slice-audit-template` when template compliance is required at chunk level.
+- Required: `model_config`, `upload_file`, `template_file`
+- Optional: `rules_file` for hybrid rule + template audit
+- Notes: template findings are normalized to `template-0001` style risk codes
 
-#### Step 4: Aggregate Risks
-Use **Risk Aggregator** to combine audit results:
-- **Parameters**:
-  - `model_config`: The LLM model to use for aggregation (required)
-  - `raw_results`: Raw audit results from multiple chunks (required)
-  - `merge_policy`: Policy for conflict resolution (default: dedupe_by_quote)
+#### D) Template Full-Text Audit
+Use `doc-audit-template` when template compliance is required for the full document.
+- Required: `model_config`, `upload_file`, `template_file`
+- Optional: `rules_file` for hybrid rule + template audit
 
-#### Step 5: Generate Annotated Document
-Use **Doc Annotator** to create the final output:
-- **Parameters**:
-  - `model_config`: The LLM model to use for annotations (required)
-  - `upload_file`: The original document file (docx only, required)
-  - `audit_report`: The aggregated audit report JSON (required)
-  - `annotation_style`: Annotation style (default: comment)
-  - `output_file_name`: The output file name without extension
-
-#### Step 6: Merge/Revise Annotated File
-Use **File Revision** to merge overlapping comments and optionally revise source text:
-- **Parameters**:
-  - `model_config`: The LLM model for semantic merge/selection (required)
-  - `upload_file`: The docx generated by Doc Annotator (required)
-  - `merge_strategy`: `keep_highest_risk` / `keep_semantic` / `merge_semantic` (required)
-  - `apply_to_original`: `no`/`yes` (required, default: `no`)
-  - `output_file_name`: The output file name without extension
+### Typical Output
+- A JSON summary (or detailed JSON if enabled)
+- A reviewed `.docx` (annotations)
+- A revised `.docx` (merged or applied revisions)
 
 ## Supported Document Formats
 
