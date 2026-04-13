@@ -6,7 +6,7 @@ identity:
     zh_Hans: "文档审核Agent"
   description:
     en_US: "LocalDocument Review Agent: Supports the review of various types of documents, including tender documents, official documents, contracts, and materials, with support for non-compliant document detection. 【 View Details and Download Template File】"
-    zh_Hans: "本地文档审核Agent：用于标书审核、公文审核、合同审核、资料审核等各种类型的文档审核(支持范本文档和非范本文档审核)。【查看详情，下载模板文件】"
+    zh_Hans: "本地文档审核Agent：用于标书审核、公文审核、合同审核、资料审核等各种类型的文档审核(支持范本和非范本)。【查看详情，下载模板文件】"
   icon: "icon.svg"
 
 #########################################################################################
