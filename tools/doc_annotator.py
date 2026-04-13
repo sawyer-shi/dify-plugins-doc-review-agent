@@ -89,9 +89,31 @@ class DocAnnotatorTool(Tool):
 
             risks = _collect_risks(report_payload)
             if not risks:
-                for m in dual_messages(self, "Error: audit_report has no risks/audit_results list.", {"error": "audit_report has no risks/audit_results list"}):
+                doc = Document(temp_path)
+                output_path = os.path.join(os.path.dirname(temp_path), f"{output_file_name}{ext}")
+                doc.save(output_path)
+                with open(output_path, "rb") as f:
+                    data = f.read()
+
+                mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                file_name = f"{output_file_name}{ext}"
+                summary_payload = {
+                    "status": "ok",
+                    "output_file": file_name,
+                    "annotation_count": 0,
+                    "output_language": output_language,
+                    "located_by_quote": 0,
+                    "located_by_hash": 0,
+                    "located_by_ref": 0,
+                    "located_by_chunk": 0,
+                    "skipped_count": 0,
+                    "mislocated_count": 0,
+                    "message": "No risks found. Returned original document without annotations.",
+                }
+                for m in dual_messages(self, json.dumps(summary_payload, ensure_ascii=False), summary_payload):
                     yield m
-                    return
+                yield self.create_blob_message(blob=data, meta={"mime_type": mime_type, "save_as": file_name, "filename": file_name})
+                return
 
             doc = Document(temp_path)
             para_map = {idx: p for idx, p in enumerate(doc.paragraphs)}

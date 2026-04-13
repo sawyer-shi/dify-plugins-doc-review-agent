@@ -1,0 +1,467 @@
+identity:
+  author: "sawyer-shi"
+  name: doc-slice-audit-template
+  label:
+    en_US: Doc Audit--Slice (Template)
+    zh_Hans: 文档审核--切片审核(范本审核)
+description:
+  human:
+    en_US: Run document slicing, optional rule loading, template slicing comparison audit, risk aggregation, annotation, and revision in one tool.
+    zh_Hans: 在一个工具中完成文档切片、可选规则加载、范本切片对比审核、风险聚合、批注与修订。
+  llm: Run document slicing, optional rule loading, template slicing comparison audit, risk aggregation, annotation, and revision in one tool.
+class_name: DocSliceAuditTemplateTool
+parameters:
+  - name: model_config
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: LLM Model
+      zh_Hans: LLM 模型
+    form: form
+    human_description:
+      en_US: The shared LLM model used by all internal audit steps.
+      zh_Hans: 所有内部审核步骤共用的 LLM 模型。
+    llm_description: Shared LLM model used by the full document audit workflow.
+  - name: upload_file
+    type: file
+    required: true
+    label:
+      en_US: Document File
+      zh_Hans: 待审核文档
+    form: llm
+    human_description:
+      en_US: The source document file to audit, docx only.
+      zh_Hans: 待审核的源文档，仅支持 docx。
+    llm_description: The source document file to audit, docx only.
+  - name: template_file
+    type: file
+    required: true
+    label:
+      en_US: Template File
+      zh_Hans: 范本文档
+    form: llm
+    human_description:
+      en_US: Template baseline document in docx format. Required for template comparison audit.
+      zh_Hans: docx 格式的范本文档。用于范本对比审核，必填。
+    llm_description: Template baseline document file, docx only, required for template comparison audit.
+  - name: rules_file
+    type: file
+    required: false
+    label:
+      en_US: Rules File (Optional)
+      zh_Hans: 规则文件(可选)
+    form: llm
+    human_description:
+      en_US: "Optional review rules file in xlsx or csv format. Required columns: rule_code, rule_name, rule_level, rule_prompt. If provided, rule-based slice audit runs in addition to template comparison audit."
+      zh_Hans: "可选的 xlsx 或 csv 审核规则文件。必须包含字段：rule_code, rule_name, rule_level, rule_prompt。提供后将同时执行规则切片审核与范本对比审核。"
+    llm_description: "Optional review rules file in xlsx or csv format. Required columns: rule_code, rule_name, rule_level, rule_prompt."
+  - name: slice_strategy
+    type: select
+    required: false
+    label:
+      en_US: Slice Strategy
+      zh_Hans: 切片策略
+    form: llm
+    human_description:
+      en_US: |-
+        Select how document chunks are split before auditing.
+        - default: paragraph accumulation with max_chunk_chars guard.
+        - by_heading: split on heading-like boundaries.
+        - by_article: split on article/clause-like boundaries.
+        - by_paragraph: one paragraph per chunk.
+        - by_sentence: sentence-level split and packing.
+        - hybrid: split on heading OR article boundaries.
+      zh_Hans: |-
+        选择审核前的文档切片方式。
+        - default：按段落累加并受 max_chunk_chars 限制。
+        - by_heading：按标题样式边界切分。
+        - by_article：按条款样式边界切分。
+        - by_paragraph：一段一片。
+        - by_sentence：按句子切分后再聚合。
+        - hybrid：标题或条款任一命中即切分。
+    llm_description: "Select chunk splitting strategy: default/by_heading/by_article/by_paragraph/by_sentence/hybrid."
+    default: ""
+    options:
+      - value: ""
+        label:
+          en_US: Default
+          zh_Hans: 默认
+        description:
+          en_US: Paragraph accumulation with max_chunk_chars guard (recommended baseline).
+          zh_Hans: 按段落累加并受 max_chunk_chars 限制（推荐基线策略）。
+      - value: "by_heading"
+        label:
+          en_US: By Heading
+          zh_Hans: 按标题
+        description:
+          en_US: Start a new chunk on heading-like lines, then apply max_chunk_chars.
+          zh_Hans: 遇到标题样式优先断块，再受 max_chunk_chars 限制。
+      - value: "by_article"
+        label:
+          en_US: By Article
+          zh_Hans: 按条款
+        description:
+          en_US: Start a new chunk on article/clause-like lines, then apply max_chunk_chars.
+          zh_Hans: 遇到条款样式优先断块，再受 max_chunk_chars 限制。
+      - value: "by_paragraph"
+        label:
+          en_US: By Paragraph
+          zh_Hans: 按段落
+        description:
+          en_US: One paragraph per chunk; long paragraphs are hard-split by max_chunk_chars.
+          zh_Hans: 一段一片；超长段按 max_chunk_chars 硬切分。
+      - value: "by_sentence"
+        label:
+          en_US: By Sentence
+          zh_Hans: 按句子
+        description:
+          en_US: Split by sentence first, then pack by max_chunk_chars.
+          zh_Hans: 先按句子切分，再按 max_chunk_chars 聚合。
+      - value: "hybrid"
+        label:
+          en_US: Hybrid
+          zh_Hans: 混合
+        description:
+          en_US: Split on heading OR article boundaries, then apply max_chunk_chars.
+          zh_Hans: 命中标题或条款边界即断块，再受 max_chunk_chars 限制。
+  - name: max_chunk_chars
+    type: number
+    required: false
+    label:
+      en_US: Max Chunk Chars
+      zh_Hans: 切片最大字符数
+    form: llm
+    human_description:
+      en_US: Suggested max characters per chunk.
+      zh_Hans: 每个切片的建议最大字符数。
+    llm_description: Suggested max characters per chunk.
+    default: 1200
+  - name: extra_hint
+    type: string
+    required: false
+    label:
+      en_US: Extra Hint
+      zh_Hans: 额外提示
+    form: llm
+    human_description:
+      en_US: "Optional audit hint, for example: I am Party A / I am Party B."
+      zh_Hans: 可选审核提示，例如：我是甲方；我是乙方。
+    llm_description: "Optional audit hint, for example: I am Party A / I am Party B."
+  - name: output_language
+    type: select
+    required: false
+    label:
+      en_US: Output Language
+      zh_Hans: 输出语言
+    form: llm
+    human_description:
+      en_US: Output language for audit reasoning and suggestions.
+      zh_Hans: 审核原因与建议的输出语言。
+    llm_description: Output language for audit reasoning and suggestions.
+    default: "auto"
+    options:
+      - value: "auto"
+        label:
+          en_US: Auto Detect
+          zh_Hans: 自动识别
+      - value: "zh"
+        label:
+          en_US: Chinese
+          zh_Hans: 中文
+      - value: "en"
+        label:
+          en_US: English
+          zh_Hans: 英文
+      - value: "ja"
+        label:
+          en_US: Japanese
+          zh_Hans: 日文
+      - value: "ko"
+        label:
+          en_US: Korean
+          zh_Hans: 韩文
+      - value: "es"
+        label:
+          en_US: Spanish
+          zh_Hans: 西班牙文
+      - value: "fr"
+        label:
+          en_US: French
+          zh_Hans: 法文
+      - value: "de"
+        label:
+          en_US: German
+          zh_Hans: 德文
+      - value: "pt"
+        label:
+          en_US: Portuguese
+          zh_Hans: 葡萄牙文
+      - value: "ru"
+        label:
+          en_US: Russian
+          zh_Hans: 俄文
+      - value: "ar"
+        label:
+          en_US: Arabic
+          zh_Hans: 阿拉伯文
+  - name: thread_num
+    type: number
+    required: false
+    label:
+      en_US: Thread Number
+      zh_Hans: 并发线程数
+    form: llm
+    human_description:
+      en_US: Number of worker threads used during rule-based chunk auditing.
+      zh_Hans: 规则分片审核阶段使用的并发线程数。
+    llm_description: Number of worker threads used during rule-based chunk auditing.
+    default: 1
+  - name: merge_policy
+    type: select
+    required: false
+    label:
+      en_US: Merge Policy
+      zh_Hans: 风险合并策略
+    form: llm
+    human_description:
+      en_US: |-
+        Controls how duplicate risk hits are deduplicated during aggregation.
+        - dedupe_by_rule_code_quote_location: keep same quote in different locations separately.
+        - dedupe_by_rule_code_quote: merge same rule+quote across locations.
+        - dedupe_by_quote: merge by quote text only.
+        - dedupe_by_rule_code: merge all hits under same rule code.
+        - dedupe_by_chunk_rule: merge by chunk_id + rule code.
+        - no_dedupe: keep all raw hits.
+      zh_Hans: |-
+        控制风险聚合时重复命中的去重方式。
+        - dedupe_by_rule_code_quote_location：同句不同位置不合并。
+        - dedupe_by_rule_code_quote：同规则同引用跨位置合并。
+        - dedupe_by_quote：仅按引用文本合并。
+        - dedupe_by_rule_code：同规则下全部命中合并。
+        - dedupe_by_chunk_rule：按 chunk_id + 规则编号合并。
+        - no_dedupe：不去重，保留全部命中。
+    llm_description: Merge policy for dedupe and conflict resolution among risk hits.
+    default: "dedupe_by_rule_code_quote_location"
+    options:
+      - value: "dedupe_by_rule_code_quote_location"
+        label:
+          en_US: Rule+Quote+Location
+          zh_Hans: 规则+引用+位置
+        description:
+          en_US: Keep same quote in different locations as separate risks.
+          zh_Hans: 同句在不同位置保留为不同风险。
+      - value: "dedupe_by_rule_code_quote"
+        label:
+          en_US: Rule+Quote
+          zh_Hans: 规则+引用
+        description:
+          en_US: Merge same rule+quote across locations.
+          zh_Hans: 同规则同引用跨位置合并。
+      - value: "dedupe_by_quote"
+        label:
+          en_US: Quote only
+          zh_Hans: 仅按引用去重
+        description:
+          en_US: Merge by quote text only.
+          zh_Hans: 仅按引用文本合并。
+      - value: "dedupe_by_rule_code"
+        label:
+          en_US: Rule only
+          zh_Hans: 仅按规则去重
+        description:
+          en_US: Merge all hits under each rule code.
+          zh_Hans: 同规则下全部命中合并。
+      - value: "dedupe_by_chunk_rule"
+        label:
+          en_US: Chunk+Rule
+          zh_Hans: 按切片+规则去重
+        description:
+          en_US: Merge by chunk id and rule code.
+          zh_Hans: 按切片编号+规则编号合并。
+      - value: "no_dedupe"
+        label:
+          en_US: No dedupe
+          zh_Hans: 不去重
+        description:
+          en_US: Keep every raw hit.
+          zh_Hans: 保留全部原始命中。
+  - name: annotation_style
+    type: select
+    required: false
+    label:
+      en_US: Annotation Style
+      zh_Hans: 批注风格
+    form: llm
+    human_description:
+      en_US: |-
+        Annotation style for generated Word comments.
+        - comment: insert native Word comments with rule code, severity, and suggestion.
+      zh_Hans: |-
+        生成 Word 批注时使用的批注风格。
+        - comment：以原生 Word 批注写入规则编号、风险等级和建议。
+    llm_description: Annotation style for the generated Word comments.
+    default: comment
+    options:
+      - value: comment
+        label:
+          en_US: Comment
+          zh_Hans: 批注
+        description:
+          en_US: Insert native Word comments with rule code, severity, and suggestion.
+          zh_Hans: 以原生 Word 批注形式写入规则编号、风险等级和建议。
+  - name: merge_strategy
+    type: select
+    required: false
+    label:
+      en_US: Revision Merge Strategy
+      zh_Hans: 修订合并策略
+    form: llm
+    human_description:
+      en_US: |-
+        Strategy used when multiple risk comments target the same original text.
+        - keep_highest_risk: keep the highest-severity comment.
+        - keep_semantic: keep one best comment by semantic quality.
+        - merge_semantic: merge multiple comments into one integrated guidance.
+      zh_Hans: |-
+        同一原文存在多个风险批注时的合并策略。
+        - keep_highest_risk：保留风险等级最高的批注。
+        - keep_semantic：按语义质量保留最优单条批注。
+        - merge_semantic：将多条批注语义合并为一条综合建议。
+    llm_description: Strategy for handling multiple comments on the same original text.
+    default: "keep_highest_risk"
+    options:
+      - value: "keep_highest_risk"
+        label:
+          en_US: Keep Highest Risk
+          zh_Hans: 按风险等级保留
+        description:
+          en_US: Keep only the highest-severity comment for each overlapping source span.
+          zh_Hans: 对重叠原文优先保留风险等级最高的批注。
+      - value: "keep_semantic"
+        label:
+          en_US: Keep Semantic Best
+          zh_Hans: 按语义保留
+        description:
+          en_US: Use semantic judgment to keep the most informative single comment.
+          zh_Hans: 通过语义判断保留信息量最好的单条批注。
+      - value: "merge_semantic"
+        label:
+          en_US: Semantic Merge
+          zh_Hans: 语义合并
+        description:
+          en_US: Semantically merge multiple comments into one integrated revision guidance.
+          zh_Hans: 对多条批注做语义合并，形成一条综合修订建议。
+  - name: apply_to_original
+    type: select
+    required: false
+    label:
+      en_US: Apply to Original
+      zh_Hans: 是否修改原文
+    form: llm
+    human_description:
+      en_US: |-
+        Whether to apply latest revision text back to original document.
+        - no: keep original text unchanged, refresh comments only.
+        - yes: apply revised text and keep latest comments.
+      zh_Hans: |-
+        是否将最终修订内容回写到原文。
+        - no：不改动原文，仅刷新批注。
+        - yes：按修订建议改动原文并保留最新批注。
+    llm_description: Whether to apply the latest revision text back to the original document.
+    default: "no"
+    options:
+      - value: "no"
+        label:
+          en_US: "No"
+          zh_Hans: 否
+        description:
+          en_US: Keep original text unchanged and update comments only.
+          zh_Hans: 不改动原文，仅刷新批注。
+      - value: "yes"
+        label:
+          en_US: "Yes"
+          zh_Hans: 是
+        description:
+          en_US: Apply revised text to the document and keep latest comments.
+          zh_Hans: 按修订建议改动原文并保留最新批注。
+  - name: output_file_name
+    type: string
+    required: false
+    label:
+      en_US: Output File Name
+      zh_Hans: 输出文件名
+    form: llm
+    human_description:
+      en_US: Final revised output file name without extension.
+      zh_Hans: 最终修订文件名，不含扩展名。
+    llm_description: Final revised output file name without extension.
+  - name: output_json_mode
+    type: select
+    required: false
+    label:
+      en_US: JSON Output Mode
+      zh_Hans: JSON输出模式
+    form: llm
+    human_description:
+      en_US: |-
+        Final JSON output mode.
+        - summary_only: output only final summary metrics.
+        - detailed: output summary plus all intermediate payloads.
+      zh_Hans: |-
+        最终 JSON 输出模式。
+        - summary_only：仅输出最终摘要指标。
+        - detailed：输出摘要和全部中间节点信息。
+    llm_description: "Control final JSON output mode: summary_only or detailed."
+    default: "summary_only"
+    options:
+      - value: "summary_only"
+        label:
+          en_US: Summary Only
+          zh_Hans: 仅摘要
+        description:
+          en_US: Return only summary metrics in final JSON.
+          zh_Hans: 最终 JSON 仅返回摘要指标。
+      - value: "detailed"
+        label:
+          en_US: Detailed
+          zh_Hans: 详细
+        description:
+          en_US: Return summary plus all intermediate node payloads.
+          zh_Hans: 返回摘要以及全部中间节点结果。
+  - name: output_file_mode
+    type: select
+    required: false
+    label:
+      en_US: Output File Mode
+      zh_Hans: 输出文件模式
+    form: llm
+    human_description:
+      en_US: |-
+        Output file mode.
+        - revised_only: output only revised_reviewed document.
+        - both: output reviewed and revised_reviewed documents.
+      zh_Hans: |-
+        输出文件模式。
+        - revised_only：仅输出 revised_reviewed 文档。
+        - both：同时输出 reviewed 与 revised_reviewed 文档。
+    llm_description: "Control file outputs: revised_only or both."
+    default: "revised_only"
+    options:
+      - value: "revised_only"
+        label:
+          en_US: Revised Only
+          zh_Hans: 仅修订稿
+        description:
+          en_US: Output only the final revised_reviewed document.
+          zh_Hans: 仅输出最终 revised_reviewed 文档。
+      - value: "both"
+        label:
+          en_US: Both Files
+          zh_Hans: 两个文件
+        description:
+          en_US: Output both reviewed and revised_reviewed documents.
+          zh_Hans: 同时输出 reviewed 与 revised_reviewed 两个文档。
+extra:
+  python:
+    source: tools/doc_slice_audit_template.py

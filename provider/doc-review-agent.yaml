@@ -54,6 +54,8 @@ identity:
 tools:
   - tools/doc-slice-audit.yaml
   - tools/doc-audit.yaml
+  - tools/doc-slice-audit-template.yaml
+  - tools/doc-audit-template.yaml
 extra:
   python:
     source: provider/doc-review-agent.py
