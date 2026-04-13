@@ -28,7 +28,7 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 2. Download Rules Template and Sample Files:
    https://github.com/sawyer-shi/awsome-dify-agents/blob/master/src/doc-review-agent/agent_test_files/review_rules_research_en.csv
 
-. Configure your LLM model settings. Also note: To prevent timeout, you can modify the parameter PLUGIN_MAX_EXECUTION_TIMEOUT to increase processing time!!!
+3. Configure your LLM model settings. Also note: To prevent timeout, you can modify the parameter PLUGIN_MAX_EXECUTION_TIMEOUT to increase processing time!!!
 
 4. Upload your document and start the review process. Results are as follows:
    <img width="1816" height="832" alt="sample02" src="https://github.com/user-attachments/assets/1f0fa651-154e-4756-abde-634260b16b31" />
