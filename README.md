@@ -44,7 +44,9 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 - **No-Risk Safe Handling**: When no risks are found, the workflow returns a valid reviewed file instead of failing
 - **Multi-Language Reasoning**: Supports zh/en/ja/ko/es/fr/de/pt/ru/ar outputs
 
-  <img width="409" height="684" alt="EN" src="https://github.com/user-attachments/assets/097c6095-2c9f-45be-ba57-eba41b396d84" /><img width="411" height="644" alt="CN" src="https://github.com/user-attachments/assets/e7db9fb0-6780-4c3e-b39d-98a40dee74a2" />
+  <img width="411" height="535" alt="EN" src="https://github.com/user-attachments/assets/163959a3-0c52-4067-b57e-ca834d727330" /><img width="409" height="546" alt="CN" src="https://github.com/user-attachments/assets/060347e2-2266-4db9-8828-e277356c40a5" />
+
+
 
 ## Core Features
 
