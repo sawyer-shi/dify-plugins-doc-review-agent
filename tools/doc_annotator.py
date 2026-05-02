@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from typing import Any
+from copy import deepcopy
 import os
 import json
 import hashlib
@@ -10,6 +11,44 @@ from dify_plugin.entities.model.message import UserPromptMessage
 
 from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages, safe_json_load, detect_text_language
 from docx import Document
+from docx.text.run import Run
+
+
+def _insert_run_after(run: Run, text: str) -> Run:
+    new_r = deepcopy(run._r)
+    run._r.addnext(new_r)
+    new_run = Run(new_r, run._parent)
+    new_run.text = text
+    return new_run
+
+
+def _runs_for_quote(paragraph: Any, quote: str) -> list[Run]:
+    if not quote:
+        return []
+
+    for run in list(paragraph.runs):
+        run_text = run.text or ""
+        start = run_text.find(quote)
+        if start < 0:
+            continue
+
+        before = run_text[:start]
+        matched = run_text[start:start + len(quote)]
+        after = run_text[start + len(quote):]
+
+        if before:
+            run.text = before
+            matched_run = _insert_run_after(run, matched)
+        else:
+            run.text = matched
+            matched_run = run
+
+        if after:
+            _insert_run_after(matched_run, after)
+
+        return [matched_run]
+
+    return []
 
 
 class DocAnnotatorTool(Tool):
@@ -314,13 +353,8 @@ Output plain text only.
                     run = para.add_run(para.text)
                     runs = [run]
 
-                target_run = None
-                if quote:
-                    for r in runs:
-                        rtxt = r.text or ""
-                        if rtxt and quote in rtxt:
-                            target_run = r
-                            break
+                target_runs = _runs_for_quote(para, quote)
+                target_run = target_runs[0] if target_runs else None
                 if target_run is None:
                     for r in runs:
                         if (r.text or "").strip():
@@ -341,7 +375,7 @@ Output plain text only.
                 detail_block = f"【{original_label}】：{original_for_comment}\n【{after_label}】：{after_for_comment}"
 
                 full_comment = f"{final_comment}\n{detail_block}"
-                doc.add_comment([target_run], full_comment, author="DocReview", initials="DR")
+                doc.add_comment(target_runs or [target_run], full_comment, author="DocReview", initials="DR")
                 if pid is not None:
                     placed_count_by_pid[pid] = placed_count_by_pid.get(pid, 0) + 1
                 annotation_count += 1
