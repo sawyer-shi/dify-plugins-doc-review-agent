@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from typing import Any
+from copy import deepcopy
 import os
 import re
 import json
@@ -10,11 +11,50 @@ from dify_plugin.entities.model.message import UserPromptMessage
 
 from docx import Document
 from docx.oxml.ns import qn
+from docx.text.run import Run
 
 from tools.utils import clean_paths, save_upload_to_temp, strip_model_thoughts, invoke_llm, dual_messages, detect_text_language
 
 
 class FileRevisionTool(Tool):
+    @staticmethod
+    def _insert_run_after(run: Run, text: str) -> Run:
+        new_r = deepcopy(run._r)
+        run._r.addnext(new_r)
+        new_run = Run(new_r, run._parent)
+        new_run.text = text
+        return new_run
+
+    @classmethod
+    def _runs_for_text(cls, para: Any, target_text: str) -> list[Run]:
+        target = str(target_text or "").strip()
+        if para is None or not target:
+            return []
+
+        for run in list(para.runs):
+            run_text = run.text or ""
+            start = run_text.find(target)
+            if start < 0:
+                continue
+
+            before = run_text[:start]
+            matched = run_text[start:start + len(target)]
+            after = run_text[start + len(target):]
+
+            if before:
+                run.text = before
+                matched_run = cls._insert_run_after(run, matched)
+            else:
+                run.text = matched
+                matched_run = run
+
+            if after:
+                cls._insert_run_after(matched_run, after)
+
+            return [matched_run]
+
+        return []
+
     @staticmethod
     def _severity_rank(sev: str) -> int:
         sval = str(sev or "").strip().lower()
@@ -531,10 +571,11 @@ class FileRevisionTool(Tool):
                 para = self._pick_target_paragraph(doc, anchor, para_ids)
                 if para is None:
                     continue
-                tr = self._pick_target_run(para, anchor)
+                target_runs = self._runs_for_text(para, anchor)
+                tr = target_runs[0] if target_runs else self._pick_target_run(para, anchor)
                 if tr is None:
                     continue
-                doc.add_comment([tr], full_comment, author="DocReview", initials="DR")
+                doc.add_comment(target_runs or [tr], full_comment, author="DocReview", initials="DR")
 
             output_path = os.path.join(os.path.dirname(temp_path), f"{output_file_name}{ext}")
             doc.save(output_path)
