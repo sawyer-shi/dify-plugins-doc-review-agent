@@ -22,33 +22,79 @@ def _insert_run_after(run: Run, text: str) -> Run:
     return new_run
 
 
+def _split_run_at(run: Run, offset: int) -> Run | None:
+    text = run.text or ""
+    if offset <= 0:
+        return run
+    if offset >= len(text):
+        return None
+    left = text[:offset]
+    right = text[offset:]
+    run.text = left
+    return _insert_run_after(run, right)
+
+
 def _runs_for_quote(paragraph: Any, quote: str) -> list[Run]:
     if not quote:
         return []
 
+    para_text = paragraph.text or ""
+    quote_start = para_text.find(quote)
+    if quote_start < 0:
+        return []
+    quote_end = quote_start + len(quote)
+
+    spans: list[tuple[Run, int, int]] = []
+    pos = 0
     for run in list(paragraph.runs):
         run_text = run.text or ""
-        start = run_text.find(quote)
-        if start < 0:
-            continue
+        next_pos = pos + len(run_text)
+        if run_text:
+            spans.append((run, pos, next_pos))
+        pos = next_pos
 
-        before = run_text[:start]
-        matched = run_text[start:start + len(quote)]
-        after = run_text[start + len(quote):]
+    start_span = None
+    end_span = None
+    for span in spans:
+        _, span_start, span_end = span
+        if start_span is None and span_start <= quote_start < span_end:
+            start_span = span
+        if span_start < quote_end <= span_end:
+            end_span = span
+            break
 
-        if before:
-            run.text = before
-            matched_run = _insert_run_after(run, matched)
-        else:
-            run.text = matched
-            matched_run = run
+    if start_span is None or end_span is None:
+        return []
 
-        if after:
-            _insert_run_after(matched_run, after)
+    start_run, start_abs, _ = start_span
+    end_run, end_abs_start, end_abs = end_span
+    same_boundary_run = start_run._r is end_run._r
 
-        return [matched_run]
+    local_end = quote_end - end_abs_start
+    if local_end < (end_abs - end_abs_start):
+        _split_run_at(end_run, local_end)
 
-    return []
+    local_start = quote_start - start_abs
+    if local_start > 0:
+        split_start = _split_run_at(start_run, local_start)
+        if split_start is not None:
+            start_run = split_start
+            if same_boundary_run:
+                end_run = split_start
+
+    current_runs = list(paragraph.runs)
+    start_idx = None
+    end_idx = None
+    for idx, run in enumerate(current_runs):
+        if start_idx is None and run._r is start_run._r:
+            start_idx = idx
+        if run._r is end_run._r:
+            end_idx = idx
+
+    if start_idx is None or end_idx is None or start_idx > end_idx:
+        return []
+
+    return current_runs[start_idx:end_idx + 1]
 
 
 class DocAnnotatorTool(Tool):

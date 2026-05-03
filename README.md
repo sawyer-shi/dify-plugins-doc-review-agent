@@ -4,12 +4,14 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 
 ## Version Information
 
-- **Current Version**: v0.0.2
-- **Release Date**: 2026-04-12
+- **Current Version**: v0.0.3
+- **Release Date**: 2026-05-03
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
 
 ### Version History
+- **v0.0.3** (2026-05-03):
+  - Optimized document revision feature: improved text matching logic across multiple text blocks for more accurate revision results
 - **v0.0.2** (2026-04-12):
   - Added integrated **slice audit tool** `doc-slice-audit` (parse -> load rules -> audit -> aggregate -> annotate -> revise)
   - Added integrated **simple/full-text audit tool** `doc-audit` for short document single-loop auditing

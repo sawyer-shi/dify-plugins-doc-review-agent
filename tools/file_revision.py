@@ -25,35 +25,81 @@ class FileRevisionTool(Tool):
         new_run.text = text
         return new_run
 
+    @staticmethod
+    def _split_run_at(run: Run, offset: int) -> Run | None:
+        text = run.text or ""
+        if offset <= 0:
+            return run
+        if offset >= len(text):
+            return None
+        left = text[:offset]
+        right = text[offset:]
+        run.text = left
+        return FileRevisionTool._insert_run_after(run, right)
+
     @classmethod
     def _runs_for_text(cls, para: Any, target_text: str) -> list[Run]:
         target = str(target_text or "").strip()
         if para is None or not target:
             return []
 
+        para_text = para.text or ""
+        target_start = para_text.find(target)
+        if target_start < 0:
+            return []
+        target_end = target_start + len(target)
+
+        spans: list[tuple[Run, int, int]] = []
+        pos = 0
         for run in list(para.runs):
             run_text = run.text or ""
-            start = run_text.find(target)
-            if start < 0:
-                continue
+            next_pos = pos + len(run_text)
+            if run_text:
+                spans.append((run, pos, next_pos))
+            pos = next_pos
 
-            before = run_text[:start]
-            matched = run_text[start:start + len(target)]
-            after = run_text[start + len(target):]
+        start_span = None
+        end_span = None
+        for span in spans:
+            _, span_start, span_end = span
+            if start_span is None and span_start <= target_start < span_end:
+                start_span = span
+            if span_start < target_end <= span_end:
+                end_span = span
+                break
 
-            if before:
-                run.text = before
-                matched_run = cls._insert_run_after(run, matched)
-            else:
-                run.text = matched
-                matched_run = run
+        if start_span is None or end_span is None:
+            return []
 
-            if after:
-                cls._insert_run_after(matched_run, after)
+        start_run, start_abs, _ = start_span
+        end_run, end_abs_start, end_abs = end_span
+        same_boundary_run = start_run._r is end_run._r
 
-            return [matched_run]
+        local_end = target_end - end_abs_start
+        if local_end < (end_abs - end_abs_start):
+            cls._split_run_at(end_run, local_end)
 
-        return []
+        local_start = target_start - start_abs
+        if local_start > 0:
+            split_start = cls._split_run_at(start_run, local_start)
+            if split_start is not None:
+                start_run = split_start
+                if same_boundary_run:
+                    end_run = split_start
+
+        current_runs = list(para.runs)
+        start_idx = None
+        end_idx = None
+        for idx, run in enumerate(current_runs):
+            if start_idx is None and run._r is start_run._r:
+                start_idx = idx
+            if run._r is end_run._r:
+                end_idx = idx
+
+        if start_idx is None or end_idx is None or start_idx > end_idx:
+            return []
+
+        return current_runs[start_idx:end_idx + 1]
 
     @staticmethod
     def _severity_rank(sev: str) -> int:
