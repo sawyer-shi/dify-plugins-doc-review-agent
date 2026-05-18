@@ -130,3 +130,75 @@ def detect_text_language(text: str) -> str:
     if max_count == ar and ar > 0:
         return "ar"
     return "en"
+
+
+def select_log_language(tool_parameters: dict[str, Any] | None = None) -> str:
+    params = tool_parameters or {}
+    output_language = str(params.get("output_language") or "").strip().lower()
+    if output_language in {"zh", "zh_hans", "zh-hans", "zh_cn", "zh-cn", "chinese"}:
+        return "zh"
+    return "en"
+
+
+def _msg(lang: str, zh: str, en: str) -> str:
+    return zh if lang == "zh" else en
+
+
+_MSGS = {
+    "doc_audit": {
+        "start": {"zh": "🚀 文档审核启动中...", "en": "🚀 Document audit starting..."},
+        "running": {"zh": "{n}/{total} 正在执行：{step}", "en": "{n}/{total} Running: {step}"},
+        "done": {"zh": "✅ {n}/{total} {step}完成。", "en": "✅ {n}/{total} {step} complete."},
+        "done_long": {"zh": "{n}/{total} 正在执行：{step}(处理时间会比较长，请耐心等待)", "en": "{n}/{total} Running: {step} (this may take a while)"},
+        "complete": {"zh": "🎯 文档审核完成！", "en": "🎯 Document audit complete!"},
+        "err_no_file": {"zh": "❌ 请输入待审核文档文件 upload_file", "en": "❌ Please upload a document file (upload_file)"},
+        "err_no_rules": {"zh": "❌ 请输入审核规则文件 rules_file", "en": "❌ Please upload a rules file (rules_file)"},
+        "err_model_config": {"zh": "❌ model_config无效", "en": "❌ model_config invalid"},
+        "err_step": {"zh": "❌ {step}失败: {detail}", "en": "❌ {step} failed: {detail}"},
+        "err_general": {"zh": "❌ 文档审核执行异常: {detail}", "en": "❌ Document audit execution error: {detail}"},
+    },
+    "doc_slice_audit": {
+        "start": {"zh": "🚀 文档切片审核启动中...", "en": "🚀 Document slice audit starting..."},
+        "running": {"zh": "{n}/{total} 正在执行：{step}", "en": "{n}/{total} Running: {step}"},
+        "done": {"zh": "✅ {n}/{total} {step}完成。", "en": "✅ {n}/{total} {step} complete."},
+        "done_long": {"zh": "{n}/{total} 正在执行：{step}(处理时间会比较长，请耐心等待)", "en": "{n}/{total} Running: {step} (this may take a while)"},
+        "complete": {"zh": "🎯 文档切片审核完成！", "en": "🎯 Document slice audit complete!"},
+        "err_no_file": {"zh": "❌ 请输入待审核文档文件 upload_file", "en": "❌ Please upload a document file (upload_file)"},
+        "err_no_rules": {"zh": "❌ 请输入审核规则文件 rules_file", "en": "❌ Please upload a rules file (rules_file)"},
+        "err_model_config": {"zh": "❌ model_config无效", "en": "❌ model_config invalid"},
+        "err_step": {"zh": "❌ {step}失败: {detail}", "en": "❌ {step} failed: {detail}"},
+        "err_general": {"zh": "❌ 文档切片审核执行异常: {detail}", "en": "❌ Document slice audit execution error: {detail}"},
+    },
+    "doc_audit_template": {
+        "start": {"zh": "🚀 文档范本审核启动中...", "en": "🚀 Template document audit starting..."},
+        "running": {"zh": "{n}/{total} 正在执行：{step}", "en": "{n}/{total} Running: {step}"},
+        "done": {"zh": "✅ {n}/{total} {step}完成。", "en": "✅ {n}/{total} {step} complete."},
+        "done_long": {"zh": "{n}/{total} 正在执行：{step}(处理时间会比较长，请耐心等待)", "en": "{n}/{total} Running: {step} (this may take a while)"},
+        "complete": {"zh": "🎯 文档范本审核完成！", "en": "🎯 Template document audit complete!"},
+        "skip_load": {"zh": "{n}/{total} 正在执行：{step}（未提供 rules_file，跳过）", "en": "{n}/{total} Running: {step} (rules_file not provided, skipped)"},
+        "skip_done": {"zh": "✅ {n}/{total} {step}已跳过。", "en": "✅ {n}/{total} {step} skipped."},
+        "err_no_file": {"zh": "❌ 请输入待审核文档文件 upload_file", "en": "❌ Please upload a document file (upload_file)"},
+        "err_model_config": {"zh": "❌ model_config无效", "en": "❌ model_config invalid"},
+        "err_step": {"zh": "❌ {step}失败: {detail}", "en": "❌ {step} failed: {detail}"},
+        "err_general": {"zh": "❌ 文档范本审核执行异常: {detail}", "en": "❌ Template document audit execution error: {detail}"},
+    },
+    "doc_slice_audit_template": {
+        "start": {"zh": "🚀 文档切片范本审核启动中...", "en": "🚀 Document slice template audit starting..."},
+        "running": {"zh": "{n}/{total} 正在执行：{step}", "en": "{n}/{total} Running: {step}"},
+        "done": {"zh": "✅ {n}/{total} {step}完成。", "en": "✅ {n}/{total} {step} complete."},
+        "done_long": {"zh": "{n}/{total} 正在执行：{step}(处理时间会比较长，请耐心等待)", "en": "{n}/{total} Running: {step} (this may take a while)"},
+        "complete": {"zh": "🎯 文档切片范本审核完成！", "en": "🎯 Document slice template audit complete!"},
+        "skip_load": {"zh": "{n}/{total} 正在执行：{step}（未提供 rules_file，跳过）", "en": "{n}/{total} Running: {step} (rules_file not provided, skipped)"},
+        "skip_done": {"zh": "✅ {n}/{total} {step}已跳过。", "en": "✅ {n}/{total} {step} skipped."},
+        "err_no_file": {"zh": "❌ 请输入待审核文档文件 upload_file", "en": "❌ Please upload a document file (upload_file)"},
+        "err_model_config": {"zh": "❌ model_config无效", "en": "❌ model_config invalid"},
+        "err_step": {"zh": "❌ {step}失败: {detail}", "en": "❌ {step} failed: {detail}"},
+        "err_general": {"zh": "❌ 文档切片范本审核执行异常: {detail}", "en": "❌ Document slice template audit execution error: {detail}"},
+    },
+}
+
+
+def fmt(tool_key: str, msg_key: str, lang: str, **kwargs: Any) -> str:
+    tmpl = _MSGS.get(tool_key, {}).get(msg_key, {})
+    text = tmpl.get(lang, tmpl.get("en", "")) if isinstance(tmpl, dict) else str(tmpl)
+    return text.format(**kwargs) if kwargs else text

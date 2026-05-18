@@ -4,12 +4,15 @@ A powerful Dify plugin providing comprehensive AI-powered document review capabi
 
 ## Version Information
 
-- **Current Version**: v0.0.3
-- **Release Date**: 2026-05-03
+- **Current Version**: v0.0.4
+- **Release Date**: 2026-05-16
 - **Compatibility**: Dify Plugin Framework
 - **Python Version**: 3.12
 
 ### Version History
+- **v0.0.4** (2026-05-16):
+  - Added multi-language progress prompts: supports Chinese and English progress and error messages during audit execution
+  - Bug Fix
 - **v0.0.3** (2026-05-03):
   - Optimized document revision feature: improved text matching logic across multiple text blocks for more accurate revision results
 - **v0.0.2** (2026-04-12):

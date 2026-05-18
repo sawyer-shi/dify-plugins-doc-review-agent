@@ -7,6 +7,8 @@ from dify_plugin import Tool
 from dify_plugin.entities.invoke_message import InvokeMessage
 from dify_plugin.entities.tool import ToolInvokeMessage
 
+from tools.utils import fmt, select_log_language
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,18 +71,16 @@ class DocSliceAuditTool(Tool):
         step_name: str | None,
         detail: str,
     ) -> list[ToolInvokeMessage]:
+        lang = getattr(self, "_lang", "en")
         payload: dict[str, Any]
         if step_name:
-            text = f"❌ {step_name}失败: {detail}"
-            payload = {
-                "error": f"{step_name}失败",
-                "detail": detail,
-                "step": step_name,
-            }
+            text = fmt("doc_slice_audit", "err_step", lang, step=step_name, detail=detail)
+            err_text = fmt("doc_slice_audit", "err_step", lang, step=step_name, detail=detail).split("❌", 1)[1].strip()
+            payload = {"error": err_text, "detail": detail, "step": step_name}
             if step_index is not None:
                 payload["step_index"] = step_index
         else:
-            text = f"❌ {detail}"
+            text = fmt("doc_slice_audit", "err_general", lang, detail=detail)
             payload = {"error": detail}
         logger.error(text)
         return [self.create_text_message(text), self.create_json_message(payload)]
@@ -123,22 +123,24 @@ class DocSliceAuditTool(Tool):
         llm_model = tool_parameters.get("model_config")
         upload_file = tool_parameters.get("upload_file")
         rules_file = tool_parameters.get("rules_file")
+        label_lang = select_log_language(tool_parameters)
+        self._lang = label_lang
 
         if not upload_file:
             logger.error("Missing required parameter: upload_file")
-            yield self.create_text_message("❌ 请输入待审核文档文件 upload_file")
+            yield self.create_text_message(fmt("doc_slice_audit", "err_no_file", label_lang))
             yield self.create_json_message({"error": "No file uploaded", "field": "upload_file"})
             return
 
         if not rules_file:
             logger.error("Missing required parameter: rules_file")
-            yield self.create_text_message("❌ 请输入审核规则文件 rules_file")
+            yield self.create_text_message(fmt("doc_slice_audit", "err_no_rules", label_lang))
             yield self.create_json_message({"error": "rules_file is required", "field": "rules_file"})
             return
 
         if not isinstance(llm_model, dict):
             logger.error("Invalid model_config")
-            yield self.create_text_message("❌ model_config invalid")
+            yield self.create_text_message(fmt("doc_slice_audit", "err_model_config", label_lang))
             yield self.create_json_message({"error": "model_config invalid", "field": "model_config"})
             return
 
@@ -165,20 +167,20 @@ class DocSliceAuditTool(Tool):
         revise_output_name = output_file_name or None
 
         steps = [
-            (1, "文档切片"),
-            (2, "规则加载"),
-            (3, "分片审核"),
-            (4, "风险聚合"),
-            (5, "文档标注"),
-            (6, "文件修订"),
+            (1, "文档切片", "Document slicing"),
+            (2, "规则加载", "Load rules"),
+            (3, "分片审核", "Chunk audit"),
+            (4, "风险聚合", "Risk aggregation"),
+            (5, "文档标注", "Annotate"),
+            (6, "文件修订", "Revise"),
         ]
-
         logger.info("Starting doc slice audit task")
-        yield self.create_text_message("🚀 文档切片审核启动中...")
+        yield self.create_text_message(fmt("doc_slice_audit", "start", label_lang))
 
         try:
-            step_index, step_name = steps[0]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            step_index, step_name_zh, step_name_en = steps[0]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "running", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             parser_result = self._run_subtool(
                 self._get_subtool_class("doc_slice_parser"),
@@ -195,10 +197,11 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             slices_payload = parser_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
-            step_index, step_name = steps[1]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            step_index, step_name_zh, step_name_en = steps[1]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "running", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             loader_result = self._run_subtool(self._get_subtool_class("rule_loader"), {"rules_file": rules_file})
             if loader_result.get("error"):
@@ -206,10 +209,11 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             rules_payload = loader_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
-            step_index, step_name = steps[2]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}(处理时间会比较长，请耐心等待)")
+            step_index, step_name_zh, step_name_en = steps[2]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "done_long", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             audit_result = self._run_subtool(
                 self._get_subtool_class("chunk_auditor"),
@@ -227,10 +231,11 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             audit_payload = audit_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
-            step_index, step_name = steps[3]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            step_index, step_name_zh, step_name_en = steps[3]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "running", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             aggregate_result = self._run_subtool(
                 self._get_subtool_class("risk_aggregator"),
@@ -245,10 +250,11 @@ class DocSliceAuditTool(Tool):
                     yield message
                 return
             aggregate_payload = aggregate_result.get("payload") or {}
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
-            step_index, step_name = steps[4]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}(处理时间会比较长，请耐心等待)")
+            step_index, step_name_zh, step_name_en = steps[4]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "done_long", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             annotate_result = self._run_subtool(
                 self._get_subtool_class("doc_annotator"),
@@ -267,13 +273,14 @@ class DocSliceAuditTool(Tool):
             annotate_payload = annotate_result.get("payload") or {}
             annotate_blobs = annotate_result.get("blobs") or []
             if not annotate_blobs:
-                for message in self._emit_error(step_index, step_name, "标注文档未生成"):
+                for message in self._emit_error(step_index, step_name, "标注文档未生成" if label_lang == "zh" else "Annotated document not generated"):
                     yield message
                 return
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
-            step_index, step_name = steps[5]
-            yield self.create_text_message(f"{step_index}/6 正在执行：{step_name}")
+            step_index, step_name_zh, step_name_en = steps[5]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_slice_audit", "running", label_lang, n=step_index, total=6, step=step_name))
             logger.info("[%s/6] %s", step_index, step_name)
             revision_input_file = self._blob_to_file(annotate_blobs[0], "annotated.docx")
             revision_result = self._run_subtool(
@@ -293,10 +300,10 @@ class DocSliceAuditTool(Tool):
             revision_payload = revision_result.get("payload") or {}
             revision_blobs = revision_result.get("blobs") or []
             if not revision_blobs:
-                for message in self._emit_error(step_index, step_name, "修订文档未生成"):
+                for message in self._emit_error(step_index, step_name, "修订文档未生成" if label_lang == "zh" else "Revised document not generated"):
                     yield message
                 return
-            yield self.create_text_message(f"✅ {step_index}/6 {step_name}完成。")
+            yield self.create_text_message(fmt("doc_slice_audit", "done", label_lang, n=step_index, total=6, step=step_name))
 
             summary = {
                 "annotation_count": int(annotate_payload.get("annotation_count", 0)) if isinstance(annotate_payload, dict) else 0,
@@ -330,7 +337,7 @@ class DocSliceAuditTool(Tool):
                 "revised_file": revision_payload,
                 "summary": summary,
             }
-            yield self.create_text_message("🎯 文档切片审核完成！")
+            yield self.create_text_message(fmt("doc_slice_audit", "complete", label_lang))
             if output_json_mode == "detailed":
                 yield self.create_json_message(detailed_payload)
             else:
@@ -346,5 +353,5 @@ class DocSliceAuditTool(Tool):
         except Exception as e:
             detail = str(e)
             logger.exception("Doc slice audit task failed: %s", detail)
-            for message in self._emit_error(None, None, f"文档切片审核执行异常: {detail}"):
+            for message in self._emit_error(None, None, detail):
                 yield message

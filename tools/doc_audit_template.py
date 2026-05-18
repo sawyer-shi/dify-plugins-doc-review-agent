@@ -10,7 +10,7 @@ from dify_plugin.entities.model.message import UserPromptMessage
 from dify_plugin.entities.tool import ToolInvokeMessage
 from docx import Document
 
-from tools.utils import clean_paths, detect_text_language, invoke_llm, safe_json_load, save_upload_to_temp, strip_model_thoughts
+from tools.utils import clean_paths, detect_text_language, fmt, invoke_llm, safe_json_load, save_upload_to_temp, select_log_language, strip_model_thoughts
 
 
 logger = logging.getLogger(__name__)
@@ -66,14 +66,15 @@ class DocAuditTemplateTool(Tool):
         return mapping.get(strategy, mapping["balanced"])
 
     def _emit_error(self, step_index: int | None, step_name: str | None, detail: str) -> list[ToolInvokeMessage]:
+        lang = getattr(self, "_lang", "en")
         payload: dict[str, Any]
         if step_name:
-            text = f"❌ {step_name}失败: {detail}"
-            payload = {"error": f"{step_name}失败", "detail": detail, "step": step_name}
+            text = fmt("doc_audit_template", "err_step", lang, step=step_name, detail=detail)
+            payload = {"error": f"{step_name} failed" if lang == "en" else f"{step_name}失败", "detail": detail, "step": step_name}
             if step_index is not None:
                 payload["step_index"] = step_index
         else:
-            text = f"❌ {detail}"
+            text = fmt("doc_audit_template", "err_general", lang, detail=detail)
             payload = {"error": detail}
         logger.error(text)
         return [self.create_text_message(text), self.create_json_message(payload)]
@@ -272,8 +273,11 @@ Requirements:
         output_json_mode = str(tool_parameters.get("output_json_mode") or "summary_only").strip().lower()
         output_file_mode = str(tool_parameters.get("output_file_mode") or "revised_only").strip().lower()
 
+        label_lang = select_log_language(tool_parameters)
+        self._lang = label_lang
+
         if not upload_file:
-            yield self.create_text_message("❌ 请输入待审核文档文件 upload_file")
+            yield self.create_text_message(fmt("doc_audit_template", "err_no_file", label_lang))
             yield self.create_json_message({"error": "No file uploaded", "field": "upload_file"})
             return
         if not template_file:
@@ -281,7 +285,7 @@ Requirements:
             yield self.create_json_message({"error": "template_file is required", "field": "template_file"})
             return
         if not isinstance(llm_model, dict):
-            yield self.create_text_message("❌ model_config invalid")
+            yield self.create_text_message(fmt("doc_audit_template", "err_model_config", label_lang))
             yield self.create_json_message({"error": "model_config invalid", "field": "model_config"})
             return
         if output_json_mode not in {"summary_only", "detailed"}:
@@ -292,58 +296,77 @@ Requirements:
         annotate_output_name = f"reviewed_{output_file_name}" if output_file_name else None
         revise_output_name = f"revised_reviewed_{output_file_name}" if output_file_name else None
 
-        yield self.create_text_message("🚀 文档范本审核启动中...")
+        yield self.create_text_message(fmt("doc_audit_template", "start", label_lang))
 
+        steps = [
+            (1, "加载审核文档", "Load document"),
+            (2, "加载范本文档", "Load template"),
+            (3, "规则加载", "Load rules"),
+            (4, "规则审核", "Audit rules"),
+            (5, "范本对比审核", "Template compare"),
+            (6, "风险聚合", "Aggregate risks"),
+            (7, "文档标注", "Annotate"),
+            (8, "文件修订", "Revise"),
+        ]
         step_index = None
         step_name = None
         try:
-            step_index, step_name = 1, "加载审核文档"
-            yield self.create_text_message("1/8 正在执行：加载审核文档")
+            step_index, step_name_zh, step_name_en = steps[0]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             slices_payload = self._build_full_document_payload(upload_file)
             if slices_payload.get("error"):
                 for m in self._emit_error(step_index, step_name, str(slices_payload.get("error"))):
                     yield m
                 return
-            yield self.create_text_message("✅ 1/8 加载审核文档完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
-            step_index, step_name = 2, "加载范本文档"
-            yield self.create_text_message("2/8 正在执行：加载范本文档")
+            step_index, step_name_zh, step_name_en = steps[1]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             template_payload = self._build_full_document_payload(template_file)
             if template_payload.get("error"):
                 for m in self._emit_error(step_index, step_name, str(template_payload.get("error"))):
                     yield m
                 return
-            yield self.create_text_message("✅ 2/8 加载范本文档完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
             rules_payload: dict[str, Any] = {"rules": [], "rule_count": 0}
             rule_audit_payload: dict[str, Any] = {"audit_results": [], "total_pairs": 0, "total_hits": 0}
             if rules_file:
-                step_index, step_name = 3, "规则加载"
-                yield self.create_text_message("3/8 正在执行：规则加载")
+                step_index, step_name_zh, step_name_en = steps[2]
+                step_name = step_name_zh if label_lang == "zh" else step_name_en
+                yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
                 loader_result = self._run_subtool(self._get_subtool_class("rule_loader"), {"rules_file": rules_file})
                 if loader_result.get("error"):
                     for m in self._emit_error(step_index, step_name, str(loader_result.get("error"))):
                         yield m
                     return
                 rules_payload = loader_result.get("payload") or {}
-                yield self.create_text_message("✅ 3/8 规则加载完成。")
+                yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
-                step_index, step_name = 4, "规则审核"
-                yield self.create_text_message("4/8 正在执行：规则审核(处理时间会比较长，请耐心等待)")
+                step_index, step_name_zh, step_name_en = steps[3]
+                step_name = step_name_zh if label_lang == "zh" else step_name_en
+                yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
                 rule_audit_payload = self._run_single_loop_audit(llm_model, slices_payload, rules_payload, extra_hint, output_language, audit_strategy)
                 if rule_audit_payload.get("error"):
                     for m in self._emit_error(step_index, step_name, str(rule_audit_payload.get("error"))):
                         yield m
                     return
-                yield self.create_text_message("✅ 4/8 规则审核完成。")
+                yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
             else:
-                yield self.create_text_message("3/8 正在执行：规则加载（未提供 rules_file，跳过）")
-                yield self.create_text_message("✅ 3/8 规则加载已跳过。")
-                yield self.create_text_message("4/8 正在执行：规则审核（未提供 rules_file，跳过）")
-                yield self.create_text_message("✅ 4/8 规则审核已跳过。")
+                step_index, step_name_zh, step_name_en = steps[2]
+                step_name = step_name_zh if label_lang == "zh" else step_name_en
+                yield self.create_text_message(fmt("doc_audit_template", "skip_load", label_lang, n=step_index, total=8, step=step_name))
+                yield self.create_text_message(fmt("doc_audit_template", "skip_done", label_lang, n=step_index, total=8, step=step_name))
+                step_index, step_name_zh, step_name_en = steps[3]
+                step_name = step_name_zh if label_lang == "zh" else step_name_en
+                yield self.create_text_message(fmt("doc_audit_template", "skip_load", label_lang, n=step_index, total=8, step=step_name))
+                yield self.create_text_message(fmt("doc_audit_template", "skip_done", label_lang, n=step_index, total=8, step=step_name))
 
-            step_index, step_name = 5, "范本对比审核"
-            yield self.create_text_message("5/8 正在执行：范本对比审核(处理时间会比较长，请耐心等待)")
+            step_index, step_name_zh, step_name_en = steps[4]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             doc_chunk = (slices_payload.get("chunks") or [{}])[0]
             template_chunk = (template_payload.get("chunks") or [{}])[0]
             template_audit_result = self._run_subtool(
@@ -365,15 +388,16 @@ Requirements:
                     yield m
                 return
             template_audit_payload = template_audit_result.get("payload") or {}
-            yield self.create_text_message("✅ 5/8 范本对比审核完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
             combined_raw = {
                 "json": [rule_audit_payload, template_audit_payload],
                 "total_pairs": int(rule_audit_payload.get("total_pairs", 0)) + int(template_audit_payload.get("total_pairs", 0)),
             }
 
-            step_index, step_name = 6, "风险聚合"
-            yield self.create_text_message("6/8 正在执行：风险聚合")
+            step_index, step_name_zh, step_name_en = steps[5]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             aggregate_result = self._run_subtool(
                 self._get_subtool_class("risk_aggregator"),
                 {"model_config": llm_model, "raw_results": combined_raw, "merge_policy": merge_policy},
@@ -383,10 +407,11 @@ Requirements:
                     yield m
                 return
             aggregate_payload = aggregate_result.get("payload") or {}
-            yield self.create_text_message("✅ 6/8 风险聚合完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
-            step_index, step_name = 7, "文档标注"
-            yield self.create_text_message("7/8 正在执行：文档标注(处理时间会比较长，请耐心等待)")
+            step_index, step_name_zh, step_name_en = steps[6]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             annotate_result = self._run_subtool(
                 self._get_subtool_class("doc_annotator"),
                 {
@@ -407,10 +432,11 @@ Requirements:
                 for m in self._emit_error(step_index, step_name, "标注文档未生成"):
                     yield m
                 return
-            yield self.create_text_message("✅ 7/8 文档标注完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
-            step_index, step_name = 8, "文件修订"
-            yield self.create_text_message("8/8 正在执行：文件修订")
+            step_index, step_name_zh, step_name_en = steps[7]
+            step_name = step_name_zh if label_lang == "zh" else step_name_en
+            yield self.create_text_message(fmt("doc_audit_template", "done_long", label_lang, n=step_index, total=8, step=step_name))
             revision_result = self._run_subtool(
                 self._get_subtool_class("file_revision"),
                 {
@@ -431,7 +457,7 @@ Requirements:
                 for m in self._emit_error(step_index, step_name, "修订文档未生成"):
                     yield m
                 return
-            yield self.create_text_message("✅ 8/8 文件修订完成。")
+            yield self.create_text_message(fmt("doc_audit_template", "done", label_lang, n=step_index, total=8, step=step_name))
 
             summary = {
                 "annotation_count": int(annotate_payload.get("annotation_count", 0)) if isinstance(annotate_payload, dict) else 0,
@@ -457,7 +483,7 @@ Requirements:
                 "revised_reviewed_file": revision_payload,
                 "summary": summary,
             }
-            yield self.create_text_message("🎯 文档范本审核完成！")
+            yield self.create_text_message(fmt("doc_audit_template", "complete", label_lang))
             if output_json_mode == "detailed":
                 yield self.create_json_message(detailed_payload)
             else:
